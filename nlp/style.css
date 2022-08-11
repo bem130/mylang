@@ -1,14 +1,14 @@
 .BCOMMENT { /* ブロックコメント */
-    color:yellowgreen;
+    color:rgb(133 179 39);
 }
 .BLANKBC { /* コメント 空白 */
-    text-decoration: underline rgba(153, 205, 50, 0.3);
+    text-decoration: line-through rgba(133, 179, 39, 0.2);
 }
 .BLANK { /* 空白 */
-    text-decoration: underline rgba(255, 255, 255, 0.3);
+    text-decoration: underline rgba(255, 255, 255, 0.1);
 }
 .FUNCTION { /* 関数 */
-    color:rgb(255, 148, 85);
+    color: rgb(255 235 46);
 }
 .TYPE { /* 型名 */
     color: rgb(112, 185, 254);
@@ -17,13 +17,13 @@
     color: rgb(15, 244, 244);
 }
 .DIGITS { /* 数値 */
-    color: rgb(255, 221, 83);
+    color: rgb(0 220 101);
 }
 .RETURN { /* RETURN */
-    color: rgb(255, 115, 115);
+    color:rgb(255 59 0);
 }
 .EXCLAIM { /* 宣言の感嘆符 */
-    color: rgb(255, 0, 60);
+    color: rgb(222 101 132);
 }
 #codearea {
     color: rgb(245, 241, 236);
