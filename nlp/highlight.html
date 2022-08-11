@@ -7,19 +7,7 @@
     </head>
     <body>
         <div>
-            <textarea id="codearea">/***************\\
-*               *
-* Block comment *
-*               *
-\\***************/
-
-!fn:void:a(num:n) = {
-    !num:n = n+10+n*2;
-    !txt:a1 = "hello";
-    !txt:t = a1+"world"; // line comment
-    rt;
-}</textarea>
-            <div id="highlight"></div>
+            <div id="codearea" contenteditable="true">/*<br> Block comment<br>*/<br><br>!fn:void:a(num:n) = {<br>    !num:n = n+10+n*2;<br>    !txt:a1 = "hello";<br>    !txt:t = a1+"world"; // line comment<br>    rt;<br>}</div>
         </div>
     </body>
 </html>
@@ -62,7 +50,7 @@ function tokenaize(c) {
                 while (c[p]==" ") {
                     p+=1;
                 }
-                token.push(["BLANK",c.slice(scomment,p),"N"])
+                token.push(["BLANK",c.slice(scomment,p)])
                 continue;
             }
             else if (c[p]=="\n") {
@@ -86,7 +74,6 @@ function tokenaize(c) {
                     if (c[p]=="\n") {
                         token.push(["BCOMMENT",c.slice(scomment,p)])
                         token.push(["CR","\n"])
-                        p++
                         scomment = p
                     }
                     p++;
@@ -141,46 +128,72 @@ function tokenaize(c) {
                 token.splice(token.length-1,1);
             }
         }
+        let brcnt = 0
         token.push(["EOF",""])
         return token;
     }
 function highlight() {
-    tokens = tokenaize(document.getElementById("codearea").value)
+    tokens = tokenaize(codeelm.innerText)
     console.log(tokens)
-    let outelm = document.getElementById("highlight")
+    let outelm = codeelm
+    // var range = document.createRange();
     outelm.innerHTML = "";
+        let brcnt = 0
+        let pacnt = 0
     for (let t=0;t<tokens.length;t++) {
         thistoken = document.createElement("span")
         inthistoken = document.createElement("pre")
         inthistoken.innerHTML += tokens[t][1]
         inthistoken.className = tokens[t][0]
+        let ccnt = ""
+        {
+            if (tokens[t][0].slice(1)=="BRACE") {
+                if (tokens[t][0][0]=="L") {
+                    brcnt++
+                    ccnt = brcnt.toString();
+                }
+                else {
+                    ccnt = brcnt.toString();
+                    brcnt--
+                }
+            }
+            if (tokens[t][0].slice(1)=="PAREN") {
+                if (tokens[t][0][0]=="L") {
+                    pacnt++
+                    ccnt = pacnt.toString();
+                }
+                else {
+                    ccnt = pacnt.toString();
+                    pacnt--
+                }
+            }
+            inthistoken.className += " "+ccnt
+        }
         thistoken.appendChild(inthistoken)
         outelm.appendChild(thistoken)
     }
+    // range.setStart(outelm, 5);
+    // range.setEnd(outelm, 15);
+    // range.select();
 }
 codeelm = document.getElementById("codearea")
 codeelm.onchange = highlight
-codeelm.onkeydown = highlight
-codeelm.onkeypress = highlight
 codeelm.onkeyup = highlight
 
 highlight()
 </script>
 <style>
-    #codearea {
-        height: 40vh;
-        width: 50vw;
-    }
     pre {
         margin: 0px;
         height: min-content;
         font-size: 23px;
         display: inline;
     }
-    #highlight {
+    #codearea {
+        height: min-content;
+        width: 70vw;
         margin: 20px;
         padding: 30px;
-        width: min-content;
         border-radius: 10px;
     }
 </style>

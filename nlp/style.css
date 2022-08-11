@@ -25,7 +25,7 @@
 .EXCLAIM { /* 宣言の感嘆符 */
     color: rgb(255, 0, 60);
 }
-#highlight {
+#codearea {
     color: rgb(245, 241, 236);
     background-color: rgb(20, 18, 28);
     border: 1px solid rgb(255, 255, 255);
