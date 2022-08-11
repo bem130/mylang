@@ -7,7 +7,8 @@
     </head>
     <body>
         <div>
-            <div id="codearea" contenteditable="true">/*<br> Block comment<br>*/<br><br>!fn:void:a(num:n) = {<br>    !num:n = n+10+n*2;<br>    !txt:a1 = "hello";<br>    !txt:t = a1+"world"; // line comment<br>    rt;<br>}</div>
+            <div class="codearea" id="highlight"></div>
+            <textarea class="codearea" id="codearea"></textarea>
         </div>
     </body>
 </html>
@@ -133,10 +134,9 @@ function tokenaize(c) {
         return token;
     }
 function highlight() {
-    tokens = tokenaize(codeelm.innerText)
+    tokens = tokenaize(codeelm.value)
     console.log(tokens)
-    let outelm = codeelm
-    // var range = document.createRange();
+    let outelm = document.getElementById("highlight")
     outelm.innerHTML = "";
         let brcnt = 0
         let pacnt = 0
@@ -156,6 +156,7 @@ function highlight() {
                     ccnt = brcnt.toString();
                     brcnt--
                 }
+            inthistoken.className += " "+ccnt
             }
             if (tokens[t][0].slice(1)=="PAREN") {
                 if (tokens[t][0][0]=="L") {
@@ -166,34 +167,37 @@ function highlight() {
                     ccnt = pacnt.toString();
                     pacnt--
                 }
-            }
             inthistoken.className += " "+ccnt
+            }
         }
         thistoken.appendChild(inthistoken)
         outelm.appendChild(thistoken)
     }
-    // range.setStart(outelm, 5);
-    // range.setEnd(outelm, 15);
-    // range.select();
+        console.log(outelm)
 }
 codeelm = document.getElementById("codearea")
-codeelm.onchange = highlight
 codeelm.onkeyup = highlight
 
 highlight()
+
 </script>
 <style>
     pre {
         margin: 0px;
         height: min-content;
-        font-size: 23px;
         display: inline;
     }
-    #codearea {
-        height: min-content;
+    .codearea {
+        height: 100vh;
         width: 70vw;
         margin: 20px;
         padding: 30px;
         border-radius: 10px;
+        top: 10px;
+        position: absolute;
+        font-size: 23px;
+        background: rgb(0, 0, 0,0);
+        color: rgb(0, 0, 0,0);
+        border: 1px solid rgb(255, 255, 255);
     }
 </style>
