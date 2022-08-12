@@ -1,14 +1,21 @@
+#highlight {
+    color: rgb(245, 241, 236);
+    pointer-events: none;
+}
 .BCOMMENT { /* ブロックコメント */
     color:rgb(133 179 39);
 }
+.LCOMMENT { /* ブロックコメント */
+    color:rgb(145, 164, 139);
+}
 .BLANKBC { /* コメント 空白 */
-    text-decoration: line-through rgba(133, 179, 39, 0.2);
+    text-decoration: line-through rgba(133, 179, 39, 0.3);
 }
 .BLANK { /* 空白 */
-    text-decoration: underline rgba(255, 255, 255, 0.1);
+    text-decoration: underline rgba(255, 255, 255, 0.4);
 }
-.FUNCTION { /* 関数 */
-    color: rgb(255 235 46);
+.FUNCTION,.IF,.ELSE { /* 関数 */
+    color: rgb(255, 0, 0);
 }
 .TYPE { /* 型名 */
     color: rgb(112, 185, 254);
@@ -25,7 +32,9 @@
 .EXCLAIM { /* 宣言の感嘆符 */
     color: rgb(222 101 132);
 }
-#highlight {
-    color: rgb(245, 241, 236);
-    pointer-events: none;
+.LPAREN,.RPAREN {
+    color: rgb(255, 157, 230);
+}
+.BOOL {
+    color: rgb(255 235 46);
 }

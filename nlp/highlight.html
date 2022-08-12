@@ -7,7 +7,8 @@
     </head>
     <body>
         <div>
-            <pre class="codearea" id="codearea" contenteditable="true"></pre>
+            <div id="linearea"></div>
+            <pre class="codearea" id="codearea" contenteditable="true"><br></pre>
             <div class="codearea" id="highlight"></div>
         </div>
     </body>
@@ -48,7 +49,7 @@ function tokenaize(c) {
             if (c[p]==" ") {
                 let scomment = p
                 while (c[p]==" ") {
-                    p+=1;
+                    p++;
                 }
                 token.push(["BLANK",c.slice(scomment,p)])
                 continue;
@@ -61,32 +62,54 @@ function tokenaize(c) {
             else if (c[p]=="/"&&c[p+1]=="*") {
                 let scomment = p
                 p+=2;
-                while (!((c[p]=="*"&&c[p+1]=="/")||c[p]==null)) {
+                while (!((c[p]=="*"&&c[p+1]=="/")||c[p+1]==null)) {
                     if (c[p]==" ") {
                         token.push(["BCOMMENT",c.slice(scomment,p)])
                         scomment = p
                         while (c[p]==" ") {
                             p++;
                         }
-                        token.push(["BLANKBC",c.slice(scomment,p)])
+                        token.push(["BLANK",c.slice(scomment,p)])
                         scomment = p
+                        continue;
                     }
-                    if (c[p]=="\n") {
+                    else if (c[p]=="\n") {
                         token.push(["BCOMMENT",c.slice(scomment,p)])
                         token.push(["CR","\n"])
-                        scomment = p+1
+                        p++;
+                        scomment = p
+                        continue;
                     }
-                    p++;
+                    p++
                 }
-                p+=2;
-                token.push(["BCOMMENT",c.slice(scomment,p)])
+                if (c[p+1]==null) {
+                    p+=2;
+                    token.push(["BCOMMENT",c.slice(scomment,p)])
+                    token.push(["CR","\n"])
+                }
+                else {
+                    p+=2;
+                    token.push(["BCOMMENT",c.slice(scomment,p)])
+                }
                 continue;
             }
             else if (c[p]=="/"&&c[p+1]=="/") {
+                let scomment = p
                 while (!(c[p+1]=="\n"||c[p+1]==null)) {
+                    if (c[p]==" ") {
+                        token.push(["LCOMMENT",c.slice(scomment,p)])
+                        scomment = p
+                        while (c[p]==" ") {
+                            p++;
+                        }
+                        token.push(["BLANK",c.slice(scomment,p)])
+                        scomment = p
+                        continue;
+                    }
                     p++;
                 }
                 p+=1;
+                token.push(["LCOMMENT",c.slice(scomment,p)])
                 continue;
             }
 
@@ -135,9 +158,14 @@ function tokenaize(c) {
 function highlight() {
     tokens = tokenaize(codeelm.innerText)
     outelm.innerHTML = "";
+    linearea.innerHTML = "";
         let brcnt = 0
         let pacnt = 0
+        let linecnt = 1
     for (let t=0;t<tokens.length;t++) {
+        if (tokens[t][0]=="CR") {
+            linecnt++
+        }
         thistoken = document.createElement("pre")
         thistoken.innerHTML += tokens[t][1]
         thistoken.className = tokens[t][0]
@@ -168,15 +196,21 @@ function highlight() {
         }
         outelm.append(thistoken)
     }
+    for (let l=1;l<linecnt;l++) {
+        lintken = document.createElement("pre")
+        lintken.innerHTML = l.toString()+"\n"
+        linearea.appendChild(lintken)
+    }
 }
 outelm = document.getElementById("highlight")
 codeelm = document.getElementById("codearea")
+linearea = document.getElementById("linearea")
 codeelm.onkeyup = highlight
 codeelm.onkeydown = highlight
 
 codeelm.addEventListener("paste", function(e) { // 参考: https://qiita.com/tashinoso/items/5519a5fa56e7585d8a93
     e.preventDefault();
-    var text = e.clipboardData.getData("text/plain");
+    var text = e.clipboardData.getData("text/plain")+"<br>";
     document.execCommand("insertHTML", false, text);
 });
 
@@ -192,21 +226,42 @@ highlight()
         display: inline;
     }
     .codearea {
-        height: 100vh;
+        height: calc(100vh - 40px);
         width: min-content;
-        min-width: 100vw;
-        margin: 20px;
-        padding: 30px;
+        min-width: calc(100vw - 90px);
+        margin: 0px;
+        padding: 20px;
+        padding-left: 70px;
         border-radius: 10px;
         top: 10px;
         position: absolute;
+        top: 0px;
+        left: 0px;
         font-size: 23px;
-        background: rgb(0, 0, 0,0);
+        background: rgb(0,0,0,0);
         color: rgb(255, 255, 255);
         border: 0px;
         display: block;
     }
     body {
         background-color: black;
+    }
+
+    #linearea {
+        padding-left: 5px;
+        width: 55px;
+        margin: 0px;
+        padding: 0px;
+        padding-top: 20px;
+        padding-bottom: 20px;
+        padding-right: 10px;
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        display: block;
+        font-size: 23px;
+        text-align: right;
+        background: rgb(81, 84, 91);
+        color: rgb(235, 235, 235);
     }
 </style>
