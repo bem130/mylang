@@ -1,0 +1,26 @@
+#highlight {
+    color: rgb(245, 241, 236);
+    pointer-events: none;
+}
+.COMMENT { /* ブロックコメント */
+    color:rgb(153, 153, 153);
+}
+.BLANKBC { /* コメント 空白 */
+    text-decoration: line-through rgba(133, 179, 39, 0.3);
+}
+
+.DIGITS { /* 数値 */
+    color: rgb(0 220 101);
+}
+.MNEM {
+    color: aquamarine;
+}
+.LABEL {
+    color: tomato;
+}
+.REG {
+    color: rgb(15, 244, 244);
+}
+.COLON {
+    color: cadetblue;
+}

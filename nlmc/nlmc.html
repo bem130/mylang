@@ -1,23 +1,287 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>nlac</title>
+        <title>nlmc</title>
         <meta charset="utf-8">
+        <link href="style.css" rel="stylesheet">
     </head>
     <body>
-        <textarea id="code" style="width: 500px;height: 500px;" spellcheck="false" autocomplete="off"></textarea>
-        <button onclick="run()">run</button>
-        <p>result >> <span id="result"></span></p>
+        <div>
+            <pre class="codearea" id="codearea" contenteditable="true" spellcheck="false" autocomplete="off"><br></pre>
+            <div class="codearea" id="highlight" spellcheck="false"></div>
+            <div id="linearea"></div>
+            <button onclick="run()" id="run">run</button>
+            <div id="resultarea">result >> <span id="result"></span></div>
+        </div>
     </body>
 </html>
 <script src="nlmc.js"></script>
 <script>
 
 function run() {
-    code = document.getElementById("code").value
+    code = document.getElementById("codearea").innerText
     var nlmc = new NLMC(code);
     console.log(nlmc.getCode())
     document.getElementById("result").innerHTML = nlmc.run()
 }
 
 </script>
+<script>
+
+
+function tokenaize(c) {
+        let searchtype = [
+            ["MNEM","mov"],
+            ["MNEM","add"],
+            ["MNEM","sub"],
+            ["MNEM","mul"],
+            ["MNEM","div"],
+            ["MNEM","push"],
+            ["MNEM","pop"],
+            ["MNEM","cmd"],
+            ["MNEM","jmp"],
+            ["MNEM","jz"],
+            ["MNEM","jnz"],
+            ["MNEM","js"],
+            ["REG","zf"],
+            ["REG","ret"],
+            ["REG","rax"],
+            ["REG","rdx"],
+            ["REG","rdi"],
+            ["REG","al"],
+            ["LABEL","label"],
+            ["COLON",","],
+        ]
+    let spc = c.split("\n");
+    let cn = 0;
+    token = []
+    while (cn<spc.length) {
+        let lp = 0;
+        if (spc[cn][0]==";") {
+            token.push(["COMMENT",spc[cn]])
+        }
+        else {
+            let c = spc[cn]
+            let p = 0;
+            while (p<c.length) {
+                if (c[p]==" ") {
+                    let scomment = p
+                    while (c[p]==" ") {
+                        p++;
+                    }
+                    token.push(["BLANK",c.slice(scomment,p)])
+                    continue;
+                }
+                else if (c[p]=="\n") {
+                    p+=1;
+                    token.push(["CR","\n"])
+                    continue;
+                }
+                else if (c[p]=="/"&&c[p+1]=="*") {
+                    let scomment = p
+                    p+=2;
+                    while (!((c[p]=="*"&&c[p+1]=="/")||c[p+1]==null)) {
+                        if (c[p]==" ") {
+                            token.push(["BCOMMENT",c.slice(scomment,p)])
+                            scomment = p
+                            while (c[p]==" ") {
+                                p++;
+                            }
+                            token.push(["BLANK",c.slice(scomment,p)])
+                            scomment = p
+                            continue;
+                        }
+                        else if (c[p]=="\n") {
+                            token.push(["BCOMMENT",c.slice(scomment,p)])
+                            token.push(["CR","\n"])
+                            p++;
+                            scomment = p
+                            continue;
+                        }
+                        p++
+                    }
+                    if (c[p+1]==null) {
+                        p+=2;
+                        token.push(["BCOMMENT",c.slice(scomment,p)])
+                        token.push(["CR","\n"])
+                    }
+                    else {
+                        p+=2;
+                        token.push(["BCOMMENT",c.slice(scomment,p)])
+                    }
+                    continue;
+                }
+                else if (c[p]=="/"&&c[p+1]=="/") {
+                    let scomment = p
+                    while (!(c[p+1]=="\n"||c[p+1]==null)) {
+                        if (c[p]==" ") {
+                            token.push(["LCOMMENT",c.slice(scomment,p)])
+                            scomment = p
+                            while (c[p]==" ") {
+                                p++;
+                            }
+                            token.push(["BLANK",c.slice(scomment,p)])
+                            scomment = p
+                            continue;
+                        }
+                        p++;
+                    }
+                    p+=1;
+                    token.push(["LCOMMENT",c.slice(scomment,p)])
+                    continue;
+                }
+
+                token.push(["VARIABLE",""]);
+                while (!(c[p]==" "||c[p]=="\n"||c[p]==null)) {
+                    let opflag = false;
+                    let mlcomm = false;
+                    for (let o=0;o<searchtype.length;o++) {
+                        if (c.startsWith(searchtype[o][1],p)) {
+                            p+=searchtype[o][1].length;
+                            if (token[token.length-1][1]!="") {
+                                token[token.length]=searchtype[o];
+                            }
+                            else {
+                                token[token.length-1]=searchtype[o];
+                            }
+                            if (token[token.length-1][0]=="COLON"&&token[token.length-2][0]=="VARIABLE") {
+                                token[token.length-2][0]="TYPE";
+                            }
+                            token.push(["VARIABLE",""]);
+                            opflag = true;
+                            break;
+                        }
+                    }
+                    if (!opflag) {
+                        token[token.length-1][1]+=c[p];
+                        if (token[token.length-1][0]=="VARIABLE") {
+                            let nums = [0,1,2,3,4,5,6,7,8,9];
+                            for (let n=0;n<nums.length;n++) {
+                                if (token[token.length-1][1][0]==nums[n]) {
+                                    token[token.length-1][0]="DIGITS"
+                                }
+                            }
+                        }
+                        p++;
+                    }
+                }
+                if (token[token.length-1][1]=="") {
+                    token.splice(token.length-1,1);
+                }
+            }
+        }
+        token.push(["CR","\n"])
+        cn++;
+    }
+    return token;
+}
+
+function highlight() {
+    tokens = tokenaize(codeelm.innerText)
+    outelm.innerHTML = "";
+    linearea.innerHTML = "";
+        let brcnt = 0
+        let pacnt = 0
+        let linecnt = 1
+    for (let t=0;t<tokens.length;t++) {
+        if (tokens[t][0]=="CR") {
+            linecnt++
+        }
+        thistoken = document.createElement("pre")
+        thistoken.innerHTML += tokens[t][1]
+        thistoken.className = tokens[t][0]
+        outelm.append(thistoken)
+    }
+    for (let l=1;l<linecnt-1;l++) {
+        lintken = document.createElement("pre")
+        lintken.innerHTML = l.toString()+"\n"
+        linearea.appendChild(lintken)
+    }
+}
+outelm = document.getElementById("highlight")
+codeelm = document.getElementById("codearea")
+linearea = document.getElementById("linearea")
+codeelm.onkeyup = highlight
+codeelm.onkeydown = highlight
+
+codeelm.addEventListener("paste", function(e) { // 参考: https://qiita.com/tashinoso/items/5519a5fa56e7585d8a93
+    e.preventDefault();
+    var text = e.clipboardData.getData("text/plain")+"<br>";
+    document.execCommand("insertHTML", false, text);
+});
+
+highlight()
+
+</script>
+<style>
+    * {
+        font-family: monospace;
+        color: white;
+    }
+    pre.codearea {
+        display: block;
+        background-color: black;
+    }
+    pre {
+        margin: 0px;
+        display: inline;
+    }
+    .codearea {
+        width: min-content;
+        min-height: calc(100vh - 40px);
+        min-width: calc(100vw - 300px);
+        margin: 0px;
+        padding: 20px;
+        padding-left: 80px;
+        border-radius: 10px;
+        top: 10px;
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        font-size: 23px;
+        background: rgb(0,0,0,0);
+        color: rgb(255, 255, 255);
+        border: 0px;
+        display: block;
+        outline: none;
+    }
+    body {
+        background-color: black;
+        background-color: rgb(58, 58, 58);
+    }
+
+    #linearea {
+        padding-left: 5px;
+        width: 55px;
+        margin: 0px;
+        padding: 0px;
+        padding-top: 20px;
+        padding-bottom: 20px;
+        padding-right: 10px;
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        display: block;
+        font-size: 23px;
+        text-align: right;
+        background: rgb(81, 84, 91);
+        color: rgb(235, 235, 235);
+    }
+
+    #run {
+        position: absolute;
+        right: 0px;
+        height: 30px;
+        width: 200px;
+        background-color: black;
+    }
+    #resultarea {
+        position: absolute;
+        right: 0px;
+        width: 180px;
+        padding: 10px;
+        height: calc(100vh - 80px);
+        overflow: scroll;
+        top: 50px;
+    }
+</style>
