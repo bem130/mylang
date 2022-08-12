@@ -6,9 +6,8 @@
         <link href="style.css" rel="stylesheet">
     </head>
     <body>
-        <div>
+        <div><pre><div class="codearea" id="codearea" contenteditable="true"></div></pre>
             <div class="codearea" id="highlight"></div>
-            <textarea class="codearea" id="codearea"></textarea>
         </div>
     </body>
 </html>
@@ -73,9 +72,9 @@ function tokenaize(c) {
                         scomment = p
                     }
                     if (c[p]=="\n") {
-                        token.push(["BCOMMENT",c.slice(scomment,p)])
+                        token.push(["BCOMMENT",c.slice(scomment,p-1)])
                         token.push(["CR","\n"])
-                        scomment = p
+                        scomment = p+1
                     }
                     p++;
                 }
@@ -134,9 +133,7 @@ function tokenaize(c) {
         return token;
     }
 function highlight() {
-    tokens = tokenaize(codeelm.value)
-    console.log(tokens)
-    let outelm = document.getElementById("highlight")
+    tokens = tokenaize(codeelm.innerText)
     outelm.innerHTML = "";
         let brcnt = 0
         let pacnt = 0
@@ -173,10 +170,12 @@ function highlight() {
         thistoken.appendChild(inthistoken)
         outelm.appendChild(thistoken)
     }
-        console.log(outelm)
 }
+outelm = document.getElementById("highlight")
 codeelm = document.getElementById("codearea")
 codeelm.onkeyup = highlight
+codeelm.onkeydown = highlight
+
 
 highlight()
 
@@ -197,7 +196,13 @@ highlight()
         position: absolute;
         font-size: 23px;
         background: rgb(0, 0, 0,0);
-        color: rgb(0, 0, 0,0);
+        color: rgb(255, 255, 255);
         border: 1px solid rgb(255, 255, 255);
+        word-break: break-all; 
+        overflow-wrap: break-word;
+        display: block;
+    }
+    body {
+        background-color: black;
     }
 </style>

@@ -26,8 +26,6 @@
     color: rgb(222 101 132);
 }
 #highlight {
-    height: min-content;
     color: rgb(245, 241, 236);
-    background-color: rgb(20, 18, 28);
-    display: block;
+    pointer-events: none;
 }
