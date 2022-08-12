@@ -218,6 +218,13 @@ highlight()
 
 </script>
 <style>
+    @font-face {
+        font-family: 'notosansjp';
+        src: url(https://bem130.github.io/mainsite/NotoSansJP-Light.otf);
+    }
+    * {
+        font-family: 'notosansjp';
+    }
     pre.codearea {
         display: block;
     }
@@ -226,7 +233,6 @@ highlight()
         display: inline;
     }
     .codearea {
-        height: calc(100vh - 40px);
         width: min-content;
         min-width: calc(100vw - 90px);
         margin: 0px;
@@ -242,6 +248,7 @@ highlight()
         color: rgb(255, 255, 255);
         border: 0px;
         display: block;
+        outline: none;
     }
     body {
         background-color: black;
