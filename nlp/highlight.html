@@ -8,8 +8,8 @@
     <body>
         <div>
             <div id="linearea"></div>
-            <pre class="codearea" id="codearea" contenteditable="true"><br></pre>
-            <div class="codearea" id="highlight"></div>
+            <pre class="codearea" id="codearea" contenteditable="true" spellcheck="false"><br></pre>
+            <div class="codearea" id="highlight" spellcheck="false"></div>
         </div>
     </body>
 </html>
@@ -234,6 +234,7 @@ highlight()
     }
     .codearea {
         width: min-content;
+        min-height: calc(100vh - 40px);
         min-width: calc(100vw - 100px);
         margin: 0px;
         padding: 20px;
