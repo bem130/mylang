@@ -3,5 +3,6 @@
         "stdio.h": "c",
         "wchar.h": "c",
         "string.h": "c"
-    }
+    },
+    "liveServer.settings.port": 5502
 }
