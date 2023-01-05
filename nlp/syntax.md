@@ -30,12 +30,12 @@
 ```
 ### 変数への代入
 ```bnf
-<var-assign> ::= <expr> [ <space> ]  '=>' [ <space> ]  <var-name>
+<var-assign> ::= <expr> [ <space> ]  '=>' [ <space> ]  <var-name> [ <space> ] ';'
 ```
 ## 式
 ```bnf
-<value> ::= <value> ' ' <value> ' ' <operator> | <immediate>
-<expr> ::= <value> ( ' ' <value> )+
+<value> ::= <value> <space> <value> <space> <operator> | <immediate>
+<expr> ::= <value> ( <space> <value> )+ [ <space> ] ';'
 ```
 ## コメント
 ```bnf
