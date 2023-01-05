@@ -14,11 +14,14 @@
 ```
 ## 関数
 ```bnf
-<func> ::= '!' [ <space> ] <var-type> ':fn:' [ <space> ] <func-name> '(' <func-def-arg> ')' [ <space> ] '{' <block> '}'
+<func> ::= '!' [ <space> ] <var-type> ':fn:' [ <space> ] <func-name> '(' <func-arg-def> ')' [ <space> ] '{' <block> '}'
 <func-def-arg> ::= <var-type> ':' <var-name>
 <func-arg-def> ::= ( <empty-text> | <func-def-arg> | <func-def-arg> { ',' <func-def-arg> } )
 ```
 ## 関数の呼び出し
+```bnf
+<func-call> ::= '(' <func-arg-def> ')' <func-name>
+```
 ## ブロック
 ## 文
 ### 変数の宣言
