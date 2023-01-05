@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "generator-code": "^1.7.2",
+    "vsce": "^2.15.0",
+    "yo": "^4.3.1"
+  }
+}
