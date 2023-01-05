@@ -2,7 +2,7 @@
 
 ## 文字
 ```bnf
-<space> ::= ( ' ' )+
+<space> ::= ( ' ' | '　' )+
 <empty-text> ::= ''
 <eol> ::= '\n' | '\r\n'
 <eols> ::= <eol>+
@@ -14,27 +14,27 @@
 ```
 ## 関数
 ```bnf
-<func> ::= '!' [ <space> ] <var-type> ':fn:' [ <space> ] <func-name> '(' <func-arg-def> ')' [ <space> ] '{' <block> '}'
+<func> ::= '宣言:' <var-type> 'を返す関数' <func-name> 'を 引数' <func-arg-def> ' 処理「' <block> '」とする。'
 <func-def-arg> ::= <var-type> ':' <var-name>
-<func-arg-def> ::= ( <empty-text> | <func-def-arg> | <func-def-arg> { ',' <func-def-arg> } )
+<func-arg-def> ::= ( '無し' | <func-def-arg> | <func-def-arg> { ',' <func-def-arg> } )
 ```
 ## 関数の呼び出し
 ```bnf
-<func-call> ::= '(' <func-arg-def> ')' <func-name>
+<func-call> ::= '引数' <func-arg-def> 'で関数' <func-name> 'を呼び出したもの'
 ```
 ## ブロック
 ## 文
 ### 変数の宣言
 ```bnf
-<var-declaration> ::= '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ] ';'
+<var-declaration> ::= '宣言:' <var-type> 'の変数' <var-name> 'を用意する。'
 ```
 ### 変数への代入
 ```bnf
-<var-assign> ::= <expr> [ <space> ]  '=>' [ <space> ]  <var-name> [ <space> ] ';'
+<var-assign> ::= <expr>  'の値を変数' <var-name> 'へ代入する。'
 ```
 ## 式
 ```bnf
-<value> ::= <value> <space> <value> <space> <operator> | <value> <space> <operator> | <immediate>
+<value> ::= ( <value> 'と' <value> 'の' <operator> | <value> 'と' <value> 'が' <operator-compare> ) | <value> 'の' <operator> | <immediate>
 <expr> ::= <value>
 ```
 ## コメント
@@ -44,9 +44,9 @@
 ```
 ## 演算子
 ```bnf
-<operator-arithmetic> ::= ( '+' | '-' | '*' | '/' | '^' )
-<operator-logical> ::= ( '!' | '&' | '|' | '' )
-<operator-general> ::= ( '=' , '!=' )
+<operator-arithmetic> ::= ( '和' | '差' | '積' | '商' | '冪' )
+<operator-logical> ::= ( '否定' | '論理積' | '論理和' )
+<operator-compare> ::= ( '等しいか' , '等しくないか' )
 ```
 ## 型の即値
 ### 数値
@@ -58,14 +58,15 @@
 ```
 ### 真理値
 ```bnf
-<bool> ::= 'true' | 'false'
+<bool> ::= '真' | '偽'
 ```
 ### 文字列
 ```bnf
 <string> ::= <string-symbol> <string-letters> <string-symbol>
-<string-symbol> ::= '"'
+<string-symbol> ::= '「'
+<string-symbol-end> ::= '」'
 <string-letters> ::= { <string-letter> }
-; <string-letter>内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにバックスラッシュを付ける
+; <string-letter>内で<string-symbol-end>を使用する場合は、( '\' <string-symbol> )のようにバックスラッシュを付ける
 ; <string-letter>内で'\'を使用する場合は、'\\'のように2つ続ける
 ```
 ### 配列

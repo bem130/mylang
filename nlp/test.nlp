@@ -1,0 +1,17 @@
+!void:fn: main() {
+    (100)run;
+}
+!void:fn: run(int:max) {
+    !int: x;
+    !int: y;
+    !int: z;
+    1 => x;
+    1 => y;
+    1 => z;
+    while (x max <) {
+        (x)out;
+        y x + => z;
+        y => x;
+        z => y;
+    }
+}
