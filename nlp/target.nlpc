@@ -1,0 +1,16 @@
+!fn:main(){
+    run(100);
+    return;
+}
+!fn:run(int:max){
+    1 => int:x;
+    1 => int:y;
+    1 => int:z;
+    while(x<max){
+        out(x);
+        y + x => z;
+        y => x;
+        z => y;
+    }
+    return;
+}
