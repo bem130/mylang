@@ -8,10 +8,12 @@
 <eols> ::= <eol>+
 <blank-lines> ::= { ( [ <space> ] | [ <eols> ] ) }
 ```
+
 ## コード
 ```bnf
-<code> ::= { <blank-lines> <func> <blank-lines> }
+<code> ::= <func> { <blank-lines> <func> }
 ```
+
 ## 関数
 ```bnf
 <func> ::= '!' [ <space> ] <var-type> ':fn:' [ <space> ] <func-name> '(' <func-arg-def> ')' [ <space> ] '{' <block> '}'
@@ -22,32 +24,55 @@
 ```bnf
 <func-call> ::= '(' <func-arg-def> ')' <func-name>
 ```
+
 ## ブロック
+```bnf
+<block> ::= <stat> { <blank-lines> <stat> }
+```
+
 ## 文
+```bnf
+<stat> :== ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> )
+```
 ### 変数の宣言
 ```bnf
-<var-declaration> ::= '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ] ';'
+<stat-var-declaration> ::= '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ] ';'
 ```
 ### 変数への代入
 ```bnf
-<var-assign> ::= <expr> [ <space> ]  '=>' [ <space> ]  <var-name> [ <space> ] ';'
+<stat-var-assign> ::= <expr> [ <space> ]  '=>' [ <space> ]  <var-name> [ <space> ] ';'
 ```
+### 式を実行
+```bnf
+<stat-run-expr> ::= <expr> [ <space> ] ';'
+```
+
 ## 式
 ```bnf
 <value> ::= <value> <space> <value> <space> <operator> | <value> <space> <operator> | <immediate>
 <expr> ::= <value>
 ```
+
 ## コメント
 ```bnf
 <inline-commnet> ::= '//' { <letter> } ( <eol> | <eof> )
 <block-comment> ::= '/*' { ( <letter> | <eol> ) } '*/'
 ```
+
 ## 演算子
 ```bnf
 <operator-arithmetic> ::= ( '+' | '-' | '*' | '/' | '^' )
 <operator-logical> ::= ( '!' | '&' | '|' | '' )
 <operator-general> ::= ( '=' , '!=' )
 ```
+
+## 構造
+```bnf
+<condition> :== <expr>
+<struct-if> ::= 'while' [ <space> ] '(' <condition> ')' [ <space> ] '{' <block> '}'
+<struct-while> ::= 'while' [ <space> ] '(' <condition> ')' [ <space> ] '{' <block> '}'
+```
+
 ## 型の即値
 ### 数値
 ```bnf
