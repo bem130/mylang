@@ -1,4 +1,4 @@
-!void:fn: main() {
+! void:fn:main() {
     (100)run;
 }
 !void:fn: run(int:max) {
