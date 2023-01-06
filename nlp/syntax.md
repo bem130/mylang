@@ -40,6 +40,10 @@
 ```bnf
 <stat-var-declaration> ::= '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ] ';'
 ```
+### 初期化付の変数の宣言
+```bnf
+<stat-var-declaration> ::= <expr> [ <space> ] '=>' [ <space> ] '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ] ';'
+```
 ### 変数への代入
 ```bnf
 <stat-var-assign> ::= <expr> [ <space> ]  '=>' [ <space> ]  <var-name> [ <space> ] ';'
