@@ -25,7 +25,7 @@ class NLPparse {
         // <code> ::= { <blank-lines> <func> <blank-lines> }
         let i = 0;
         while (i<this.code.length) {
-            // <func> ::= '!' [ <space> ] <var-type> ':fn:' [ <space> ] <func-name> '(' <func-arg-def> ')' [ <space> ] '{' <block> '}'
+            // <func> ::= '!' [ <space> ] <var-type> ':fn:' [ <space> ] <func-name> '(' <func-arg-def> ')'  { ( <space> | <eol> ) }  '{' <block> '}'
             if (this.code[i]=='!') { // '!'
                 let func = {
                     name: "",
@@ -49,7 +49,6 @@ class NLPparse {
                 }
                 i+=3;
                 // [ <space> ]
-                i++;
                 while (i<this.code.length&&this.code[i]==" ") {i++;}
                 // <func-name> '('
                 while (i<this.code.length&&this.code[i]!="(") {
@@ -62,11 +61,63 @@ class NLPparse {
                     func.args += this.code[i];
                     i++;
                 }
-                this.info(["関数を読み込みました",func]);
+                //  { ( <space> | <eol> ) } 
+                i++;
+                while (i<this.code.length&&(this.code[i]==" "||this.code[i]=="\n"||(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++))) {i++;}
+                // '{'
+                if (!this.code.startsWith('{',i)) {
+                    this.error(i,["関数の定義に問題があります"]);
+                    return false;
+                }
+                i+=1;
+                // <block> '}'
+                let brccnt = 1;
+                while (i<this.code.length) {
+                    // <block> ::= <stat> { <blank-lines> <stat> }
+                    // ; <block> の中では、 <string> の中以外で組になっていない '{' '}' が出てくることはない
+                    if (this.code[i]=="\"") { // <string-symbol>
+                        // <string> ::= <string-symbol> <string-letters> <string-symbol>
+                        // <string-symbol> ::= '"'
+                        // <string-letters> ::= { <string-letter> }
+                        // ; <string-letter>内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにバックスラッシュを付ける
+                        // ; <string-letter>内で '\' を使用する場合は、 '\\' のように2つ続ける
+                        // ; エスケープは '\' と1文字の合計2文字で構成される
+                        func.block += this.code[i];
+                        i++;
+                        //  <string-letters> <string-symbol>
+                        while (i<this.code.length) {
+                            // ; <string-letter> 内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにエスケープする
+                            // ; <string-letter> 内で '\' を使用する場合は、 '\\' のようにエスケープする
+                            // ; <string-letter> 内で、エスケープに使われない '\' は認められない
+                            if (this.code[i]=="\\") {
+                                func.block += this.code[i];
+                                // ; エスケープは '\' と1文字の合計2文字で構成される
+                                i++;
+                            }
+                            if (this.code[i]=="\"") { // <string-symbol>
+                                break;
+                            }
+                            func.block += this.code[i];
+                            i++;
+                        }
+                    }
+                    else if (this.code[i]=="{") {
+                        brccnt++;
+                    }
+                    else if (this.code[i]=="}") {
+                        brccnt--;
+                    }
+                    if (brccnt==0) {
+                        break;
+                    }
+                    func.block += this.code[i];
+                    i++;
+                }
+                this.info([func.name,"関数を読み込みました"]);
             }
             else if (this.code[i]==" ") {
             }
-            else if (this.code[i]=="\n"|(this.code[i]=="\r"&&this.code[i+1]=="\n")|this.code[i]=="\0") {
+            else if (this.code[i]=="\n"|(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++)|this.code[i]=="\0") {
             }
             else {
                 this.error(i,["トップレベルに関数、改行、空白以外が存在します'",this.code[i],"'"]);
@@ -77,13 +128,40 @@ class NLPparse {
     }
 }
 
-
-
 {
-    let testcode = `
-        !void:fn:main()
-        ! int:fn: sub (int:x)
-        ! int:fn: add (int:x,int:y)
-    `
-    new NLPparse(testcode);
+let testcode = `
+!void:fn:main(){
+    10;
+}
+
+! int:fn: sub(int:x) {
+    10;
+    "";
+    "abc";
+    "\\n\\n";
+    "ab\\0c\\{aaa" "{" +;
+}
+
+! int:fn: add(int:x,int:y){
+    return;
+}
+`
+testcode = `
+! void:fn:main() {(100)run;}
+!void:fn: run(int:max) {
+    !int: x;
+    !int: y;
+    !int: z;
+    1 => x;
+    1 => y;
+    1 => z;
+    while (x max <) {
+        (x)out;
+        y x + => z;
+        y => x;
+        z => y;
+    }
+}
+`
+new NLPparse(testcode);
 }

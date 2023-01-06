@@ -1,5 +1,7 @@
 # 構文
 
+this is a joke notation like japanese, [normal version](./syntax.md)
+
 ## 文字
 ```bnf
 <space> ::= ( ' ' | '　' )+

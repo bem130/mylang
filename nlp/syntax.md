@@ -11,12 +11,13 @@
 
 ## コード
 ```bnf
-<code> ::= <func> { <blank-lines> <func> }
+<toplevel-member> ::= <func>
+<code> ::= <toplevel-member> { <blank-lines> <toplevel-member> }
 ```
 
 ## 関数
 ```bnf
-<func> ::= '!' [ <space> ] <var-type> ':fn:' [ <space> ] <func-name> '(' <func-arg-def> ')' [ <space> ] '{' <block> '}'
+<func> ::= '!' [ <space> ] <var-type> ':fn:' [ <space> ] <func-name> '(' <func-arg-def> ')' { ( <space> | <eol> ) } '{' <block> '}'
 <func-def-arg> ::= <var-type> ':' <var-name>
 <func-arg-def> ::= ( <empty-text> | <func-def-arg> | <func-def-arg> { ',' <func-def-arg> } )
 ```
@@ -28,6 +29,7 @@
 ## ブロック
 ```bnf
 <block> ::= <stat> { <blank-lines> <stat> }
+; <block> の中では、 <string> の中以外で組になっていない '{' '}' が出てくることはない
 ```
 
 ## 文
@@ -90,8 +92,10 @@
 <string> ::= <string-symbol> <string-letters> <string-symbol>
 <string-symbol> ::= '"'
 <string-letters> ::= { <string-letter> }
-; <string-letter>内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにバックスラッシュを付ける
-; <string-letter>内で'\'を使用する場合は、'\\'のように2つ続ける
+; <string-letter> 内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにエスケープする
+; <string-letter> 内で '\' を使用する場合は、 '\\' のようにエスケープする
+; <string-letter> 内で、エスケープに使われない '\' は認められない
+; エスケープは '\' と1文字の合計2文字で構成される
 ```
 ### 配列
 ```bnf
