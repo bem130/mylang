@@ -163,5 +163,23 @@ testcode = `
     }
 }
 `
+// testcode = `
+// ! void:():fn: main {(100)run;}
+// !void:(int:max):fn: run {
+//     1 => !int: x;
+//     1 => !int: y;
+//     1 => !int: z;
+//     while (x max <) {
+//         (x)out;
+//         y x + => z;
+//         y => x;
+//         z => y;
+//     }
+// }
+// `
+// testcode = `
+// !void:():fn:main{(100)run;}
+// !void:(int:max):fn:run{1 =>!int:x;1 =>!int:y;1 =>!int:z;while(x max <){(x)out;y x + =>z;y =>x;z =>y;}}
+// `
 new NLPparse(testcode);
 }

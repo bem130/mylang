@@ -17,7 +17,7 @@
 
 ## 関数
 ```bnf
-<func> ::= '!' [ <space> ] <var-type> ':fn:' [ <space> ] <func-name> '(' <func-arg-def> ')' { ( <space> | <eol> ) } '{' <block> '}'
+<func> ::= '!' [ <space> ] <var-type> ':(' <func-arg-def> '):fn:' [ <space> ] <func-name> { ( <space> | <eol> ) } '{' <block> '}'
 <func-def-arg> ::= <var-type> ':' <var-name>
 <func-arg-def> ::= ( <empty-text> | <func-def-arg> | <func-def-arg> { ',' <func-def-arg> } )
 ```
