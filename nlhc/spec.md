@@ -4,44 +4,47 @@
 
 オブジェクト指向 型 型変換 型推論
 
-## 文
-```
-class 文 {
-}
-```
-
 ## ノード
 ```
+class sentencenode {
+}
 class verbnode {
-    args: 引数, // 目的語
+    args: 引数, // node
     tense: 時制, // 過去 現在 未来
     state: 状態, // 継続 断続 起動 完了 結果 終止
     view: 態, // 受動 能動 交互
     sence: 感覚, // 使役 自発 尊敬
-    meaning: 意味,
+    meaning: 意味, // s c
 }
 class nounnode {
-    meaning: 意味,
+    meaning: 意味, // o
     case: 格, // 主格 所有格 与格 奪格
-    args: 引数, // 目的語
+    args: 引数, // o node
 }
 class adjectivenode {
-    meaning: 意味,
-    args: 引数, // 名詞句
+    meaning: 意味, // l f
+    args: 引数, // s c node
 }
 class conjunctionnode {
-    meaning: 意味,
-    args: 引数, // 名詞句
+    meaning: 意味, // s c
+    args: 引数, // s c o node
 }
 ```
 
 ## 単語
 単語の意味は、階層構造で表される
+- s 状態 state
+- c 変化 change
+- o 名前 object
+- d 数字 digit
+- u 単位 unit
+- l 見た目 looks
+- f 感覚 feeling
 ```
 class word {
     name: 名前,
     meaning: {
-        verb: {
+        o: {
             "意味": {
                 意味,
                 意味,
@@ -51,7 +54,7 @@ class word {
                 意味,
             },
         },
-        noun: {
+        c: {
             "意味",
         },
     }
