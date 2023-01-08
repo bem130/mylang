@@ -15,7 +15,7 @@
 <code> ::= <toplevel-member> { <blank-lines> <toplevel-member> }
 ```
 
-## 関数
+## 関数の定義
 ```bnf
 <func> ::= '!' [ <space> ] <var-type> ':(' <func-arg-def> '):fn:' [ <space> ] <func-name> { ( <space> | <eol> ) } '{' <block> '}'
 <func-def-arg> ::= <var-type> ':' <var-name>
@@ -28,29 +28,29 @@
 
 ## ブロック
 ```bnf
-<block> ::= <stat> { <blank-lines> <stat> }
+<block> ::= { <blank-lines> ( <stat> | <control>) } <blank-lines>
 ; <block> の中では、 <string> の中以外で組になっていない '{' '}' が出てくることはない
 ```
 
 ## 文
 ```bnf
-<stat> :== ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> )
+<stat> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> ) ';'
 ```
 ### 変数の宣言
 ```bnf
-<stat-var-declaration> ::= '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ] ';'
+<stat-var-declaration> ::= '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
 ```
 ### 初期化付の変数の宣言
 ```bnf
-<stat-var-declaration> ::= <expr> [ <space> ] '=>' [ <space> ] '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ] ';'
+<stat-var-declaration> ::= <expr> [ <space> ] '=>' [ <space> ] '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
 ```
 ### 変数への代入
 ```bnf
-<stat-var-assign> ::= <expr> [ <space> ]  '=>' [ <space> ]  <var-name> [ <space> ] ';'
+<stat-var-assign> ::= <expr> [ <space> ]  '=>' [ <space> ]  <var-name> [ <space> ]
 ```
 ### 式を実行
 ```bnf
-<stat-run-expr> ::= <expr> [ <space> ] ';'
+<stat-run-expr> ::= <expr> [ <space> ]
 ```
 
 ## 式
@@ -74,9 +74,10 @@
 
 ## 構造
 ```bnf
-<condition> :== <expr>
-<struct-if> ::= 'while' [ <space> ] '(' <condition> ')' [ <space> ] '{' <block> '}'
-<struct-while> ::= 'while' [ <space> ] '(' <condition> ')' [ <space> ] '{' <block> '}'
+<control> ::= <struct-if> | <struct-while>
+<condition> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> )
+<struct-if> ::= '!' [ <space> ] '(' <condition> '):if' [ <space> ] '{' <block> '}'
+<struct-while> ::= '!' [ <space> ] '(' <condition> '):while' [ <space> ] '{' <block> '}'
 ```
 
 ## 型の即値
