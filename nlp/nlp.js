@@ -16,16 +16,16 @@ class NLPparse {
         }
     }
     error(i,msg) {
-        console.error(`[error:${i}]`,...msg)
+        console.error(`[error:${i}]`,...msg);
     }
     info(msg) {
-        console.log(`[info]`,...msg)
+        console.log(`[info]`,...msg);
     }
     toplevel() {
         // <code> ::= { <blank-lines> <func> <blank-lines> }
         let i = 0;
         while (i<this.code.length) {
-            // <func> ::= '!' [ <space> ] <var-type> ':fn:' [ <space> ] <func-name> '(' <func-arg-def> ')'  { ( <space> | <eol> ) }  '{' <block> '}'
+            // <func> ::= '!' [ <space> ] <var-type> ':(' <func-arg-def> '):fn:' [ <space> ] <func-name> { ( <space> | <eol> ) } '{' <block> '}'
             if (this.code[i]=='!') { // '!'
                 let func = {
                     name: "",
@@ -41,19 +41,10 @@ class NLPparse {
                     func.return += this.code[i];
                     i++;
                 }
-                // 'fn:'
                 i++;
-                if (!this.code.startsWith('fn:',i)) {
-                    this.error(i,["関数の定義に問題があります"]);
-                    return false;
-                }
-                i+=3;
-                // [ <space> ]
-                while (i<this.code.length&&this.code[i]==" ") {i++;}
-                // <func-name> '('
-                while (i<this.code.length&&this.code[i]!="(") {
-                    func.name += this.code[i];
-                    i++;
+                // '('
+                if (this.code[i]!='(') {
+                    this.error(i,["引数の括弧がありません"]);
                 }
                 // <func-arg-def> ')'
                 i++;
@@ -61,12 +52,35 @@ class NLPparse {
                     func.args += this.code[i];
                     i++;
                 }
-                //  { ( <space> | <eol> ) } 
+                // ':fn:'
                 i++;
-                while (i<this.code.length&&(this.code[i]==" "||this.code[i]=="\n"||(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++))) {i++;}
+                if (!this.code.startsWith(':fn:',i)) {
+                    this.error(i,["関数の定義に問題があります1"]);
+                    return false;
+                }
+                i+=4;
+                // [ <space> ]
+                while (i<this.code.length&&this.code[i]==" ") {i++;}
+                // <func-name> { ( <space> | <eol> ) } 
+                while (i<this.code.length) {
+                    if (this.code[i]=="\n"|(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++)) {
+                        break;
+                    }
+                    if (this.code[i]==" ") {
+                        break;
+                    }
+                    func.name += this.code[i];
+                    i++;
+                }
+                while (i<this.code.length) {
+                    if (!(this.code[i]==" "||(this.code[i]=="\n"|(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++)))) {
+                        break;
+                    }
+                    i++;
+                }
                 // '{'
                 if (!this.code.startsWith('{',i)) {
-                    this.error(i,["関数の定義に問題があります"]);
+                    this.error(i,["関数の定義に問題があります2"]);
                     return false;
                 }
                 i+=1;
@@ -114,6 +128,7 @@ class NLPparse {
                     i++;
                 }
                 this.info([func.name,"関数を読み込みました"]);
+                console.log(func)
             }
             else if (this.code[i]==" ") {
             }
@@ -163,20 +178,22 @@ testcode = `
     }
 }
 `
-// testcode = `
-// ! void:():fn: main {(100)run;}
-// !void:(int:max):fn: run {
-//     1 => !int: x;
-//     1 => !int: y;
-//     1 => !int: z;
-//     while (x max <) {
-//         (x)out;
-//         y x + => z;
-//         y => x;
-//         z => y;
-//     }
-// }
-// `
+testcode = `
+!void:():fn:main {
+    (100)run;
+}
+!void:(int:max):fn: run {
+    1 => !int: x;
+    1 => !int: y;
+    1 => !int: z;
+    while (x max <) {
+        (x)out;
+        y x + => z;
+        y => x;
+        z => y;
+    }
+}
+`
 // testcode = `
 // !void:():fn:main{(100)run;}
 // !void:(int:max):fn:run{1 =>!int:x;1 =>!int:y;1 =>!int:z;while(x max <){(x)out;y x + =>z;y =>x;z =>y;}}
