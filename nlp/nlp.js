@@ -8,7 +8,9 @@ class NLPparse {
         console.log(this.functions)
         let functionnames = Object.keys(this.functions);
         for (let name of functionnames) {
-            this.block(this.functions[name].block);
+            this.info([name,"関数の内容を読み込みます"]);
+            let block = this.block(this.functions[name].block);
+            console.log(block)
         }
     }
     delete_comments() {
@@ -67,59 +69,104 @@ class NLPparse {
     }
     block(block_code) {
         // <block> ::= { <blank-lines> ( <stat> | <control>) } <blank-lines>
+        let list = [];
         let i = 0;
         while (i<block_code.length) {
+            let stat = {
+                type: "stat",
+                stat: "",
+            }
             if ((block_code[i]==" "||(block_code[i]=="\n"|(block_code[i]=="\r"&&block_code[i+1]=="\n"&&i++)))) { // <blank-lines>
                 i++;
             }
-            else if (block_code[i]=="!") { // <control>
-                // <control> ::= '!' [ <space> ] 'ctrl:(' <condition> '):' <struct-if> | <struct-while>
-                // <condition> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> )
-                // <struct-if> ::= 'if' [ <space> ] '{' <block> '}'
-                // <struct-while> ::= 'while' [ <space> ] '{' <block> '}'
-                let ctrl = {
-                    type: "",
-                    condition: "",
-                    block: "",
-                };
+            else if (block_code[i]=="!") { // 宣言
                 i++;
                 while (i<block_code.length&&block_code[i]==" ") {i++;}
-                if (!block_code.startsWith('ctrl:',i)) {
-                    this.error(i,block_code,["制御構造の定義に問題があります0"]);
-                    return false;
-                }
-                i+=5;
-                // '('
-                if (block_code[i]!='(') {
-                    this.error(i,block_code,["制御構造の定義に問題があります1","条件の括弧がありません"]);
-                    return false;
-                }
-                // <condition> ')'
-                i++;
-                while (i<block_code.length&&block_code[i]!=")") {
-                    ctrl.condition += block_code[i];
+                if (block_code.startsWith('ctrl:',i)) { // <control>
+                    // <control> ::= '!' [ <space> ] 'ctrl:(' <condition> '):' <struct-if> | <struct-while>
+                    // <condition> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> )
+                    // <struct-if> ::= 'if' [ <space> ] '{' <block> '}'
+                    // <struct-while> ::= 'while' [ <space> ] '{' <block> '}'
+                    let ctrl = {
+                        type: "",
+                        condition: "",
+                        block: "",
+                    };
+                    i+=5;
+                    // '('
+                    if (block_code[i]!='(') {
+                        this.error(i,block_code,["制御構造の定義に問題があります1","条件の括弧がありません"]);
+                        return false;
+                    }
+                    // <condition> ')'
                     i++;
-                }
-                // ':'
-                i++;
-                if (block_code[i]!=':') {
-                    this.error(i,block_code,["制御構造の定義に問題があります2"]);
-                    return false;
-                }
-                i++;
-                if (block_code.startsWith('if',i)) { // <struct-if> ::= 'if' [ <space> ] '{' <block> '}'
-                    console.log("if");
-                    ctrl.type = "if";
-                }
-                else if (block_code.startsWith('while',i)) { // <struct-while> ::= 'while' [ <space> ] '{' <block> '}'
-                    console.log("while");
-                    ctrl.type = "while";
+                    while (i<block_code.length&&block_code[i]!=")") {
+                        ctrl.condition += block_code[i];
+                        i++;
+                    }
+                    // ':'
+                    i++;
+                    if (block_code[i]!=':') {
+                        this.error(i,block_code,["制御構造の定義に問題があります2"]);
+                        return false;
+                    }
+                    i++;
+                    if (block_code.startsWith('if',i)) { // <struct-if> ::= 'if' [ <space> ] '{' <block> '}'
+                        ctrl.type = "if";
+                        i+=2;
+                        while (i<block_code.length&&block_code[i]==" ") {i++;}
+                    }
+                    else if (block_code.startsWith('while',i)) { // <struct-while> ::= 'while' [ <space> ] '{' <block> '}'
+                        ctrl.type = "while";
+                        i+=5;
+                        while (i<block_code.length&&block_code[i]==" ") {i++;}
+                    }
+                    else {
+                        this.error(i,block_code,["制御構造の定義に問題があります3","制御構造の型がありません"]);
+                        return false;
+                    }
+                    // '{'
+                    if (!block_code.startsWith('{',i)) {
+                        this.error(i,block_code,["関数の定義に問題があります2"]);
+                        return false;
+                    }
+                    i+=1;
+                    // <block> '}' // toplevel()内と同一コード
+                    let brccnt = 1;
+                    while (i<block_code.length) {
+                        if (block_code[i]=="\"") {
+                            ctrl.block += block_code[i];
+                            i++;
+                            while (i<block_code.length) {
+                                if (block_code[i]=="\\") {
+                                    ctrl.block += block_code[i];
+                                    i++;
+                                }
+                                if (block_code[i]=="\"") {
+                                    break;
+                                }
+                                ctrl.block += block_code[i];
+                                i++;
+                            }
+                        }
+                        else if (block_code[i]=="{") {
+                            brccnt++;
+                        }
+                        else if (block_code[i]=="}") {
+                            brccnt--;
+                        }
+                        if (brccnt==0) {
+                            break;
+                        }
+                        ctrl.block += block_code[i];
+                        i++;
+                    }
+                    i++;
+                    ctrl.block = this.block(ctrl.block);
+                    list.push(ctrl);
                 }
                 else {
-                    this.error(i,block_code,["制御構造の定義に問題があります3","制御構造の型がありません"]);
-                    return false;
                 }
-                console.log(ctrl)
             }
             else { // <stat>
                 // <stat> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> ) ';'
@@ -128,10 +175,13 @@ class NLPparse {
                         i++;
                         break;
                     }
+                    stat.stat += block_code[i];
                     i++;
                 }
+                list.push(stat);
             }
         }
+        return list;
     }
     toplevel() {
         // <code> ::= { <blank-lines> <func> <blank-lines> }
@@ -297,8 +347,10 @@ testcode = `
 `
 testcode = `
 !void:():fn:main {
-    (100)run;
-    "string//comment test" => !string: s;
+    !ctrl:(true):if {
+        (100)run;
+    }
+    "Hello World!" => !string: hw;
 }
 // comment
 !void:(int:max):fn: run {
