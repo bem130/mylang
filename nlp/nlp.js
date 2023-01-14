@@ -11,6 +11,9 @@ class NLPparse {
             this.info([name,"関数の内容を読み込みます"]);
             let block = this.block(this.functions[name].block);
             console.log(block)
+            if (block==false) {
+                return false;
+            }
         }
     }
     delete_comments() {
@@ -69,11 +72,12 @@ class NLPparse {
     }
     block(block_code) {
         // <block> ::= { <blank-lines> ( <stat> | <control>) } <blank-lines>
-        let list = [];
+        let list = {var:{},stats:[]};
         let i = 0;
         while (i<block_code.length) {
             let stat = {
                 type: "stat",
+                assign: "",
                 stat: "",
             }
             if ((block_code[i]==" "||(block_code[i]=="\n"|(block_code[i]=="\r"&&block_code[i+1]=="\n"&&i++)))) { // <blank-lines>
@@ -81,7 +85,7 @@ class NLPparse {
             }
             else if (block_code[i]=="!") { // 宣言
                 i++;
-                while (i<block_code.length&&block_code[i]==" ") {i++;}
+                while (i<block_code.length&&block_code[i]==" ") {i++;} // [ <space> ]
                 if (block_code.startsWith('ctrl:',i)) { // <control>
                     // <control> ::= '!' [ <space> ] 'ctrl:(' <condition> '):' <struct-if> | <struct-while>
                     // <condition> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> )
@@ -163,22 +167,68 @@ class NLPparse {
                     }
                     i++;
                     ctrl.block = this.block(ctrl.block);
-                    list.push(ctrl);
+                    if (ctrl.block==false) {
+                        return false;
+                    }
+                    list.stats.push(ctrl);
                 }
                 else {
+                    // <stat-var-declaration> ::= '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
+                    let decl = {
+                        var_type: "",
+                        var_name: "",
+                    }
+                    while (i<block_code.length&&block_code[i]!=":") {
+                        decl.var_type += block_code[i];
+                        i++;
+                    }
+                    i++;
+                    while (i<block_code.length&&block_code[i]==" ") {i++;}
+                    while (i<block_code.length) {
+                        if (block_code[i]==" ") {
+                            i++;
+                            while (i<block_code.length&&block_code[i]!=";") {
+                                if (block_code[i]!=" ") {
+                                    this.error(i,block_code,["変数の定義に問題があります"]);
+                                    return false;
+                                }
+                                i++;
+                            }
+                            break;
+                        }
+                        if (block_code[i]==";") {
+                            i++;
+                            break;
+                        }
+                        decl.var_name += block_code[i];
+                        i++;
+                    }
+                    console.log(decl)
+                    if (list.var[decl.var_name]!=null) {
+                        this.error(i,block_code,["変数の定義に問題があります","同じブロック内で、同じ名前の変数は定義できません"]);
+                        return false;
+                    }
+                    list.var[decl.var_name] = decl;
                 }
             }
             else { // <stat>
                 // <stat> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> ) ';'
+                let decl = {
+                    var_type: "",
+                    var_name: "",
+                }
                 while (i<block_code.length) {
                     if (block_code[i]==";") {
                         i++;
                         break;
                     }
+                    else if (block_code.startsWith('=>',i)) {
+                        i+=2;
+                    }
                     stat.stat += block_code[i];
                     i++;
                 }
-                list.push(stat);
+                list.stats.push(stat);
             }
         }
         return list;
@@ -354,7 +404,8 @@ testcode = `
 }
 // comment
 !void:(int:max):fn: run {
-    1 => !int: x;
+    !int: x;
+    1 => x;
     1 => !int: y;
     1 => !int: z;
     !ctrl:(x max <):while {
