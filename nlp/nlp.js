@@ -6,6 +6,10 @@ class NLPparse {
         this.functions = {};
         this.toplevel();
         console.log(this.functions)
+        let functionnames = Object.keys(this.functions);
+        for (let name of functionnames) {
+            this.block(this.functions[name].block);
+        }
     }
     delete_comments() {
         let code = "";
@@ -55,7 +59,7 @@ class NLPparse {
         }
         this.code = code;
     }
-    error(i,msg) {
+    error(i,level,msg) {
         console.error(`[error:${i}]`,...msg);
     }
     info(msg) {
@@ -65,11 +69,67 @@ class NLPparse {
         // <block> ::= { <blank-lines> ( <stat> | <control>) } <blank-lines>
         let i = 0;
         while (i<block_code.length) {
-            if (block_code[i]=="!") { // <control> ::p= <struct-if> | <struct-while>
-                // <struct-if> ::= '!' [ <space> ] '(' <condition> '):if' [ <space> ] '{' <block> '}'
-                // <struct-while> ::= '!' [ <space> ] '(' <condition> '):while' [ <space> ] '{' <block> '}'
+            if ((block_code[i]==" "||(block_code[i]=="\n"|(block_code[i]=="\r"&&block_code[i+1]=="\n"&&i++)))) { // <blank-lines>
+                i++;
             }
-            else { // <stat> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> ) ';'
+            else if (block_code[i]=="!") { // <control>
+                // <control> ::= '!' [ <space> ] 'ctrl:(' <condition> '):' <struct-if> | <struct-while>
+                // <condition> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> )
+                // <struct-if> ::= 'if' [ <space> ] '{' <block> '}'
+                // <struct-while> ::= 'while' [ <space> ] '{' <block> '}'
+                let ctrl = {
+                    type: "",
+                    condition: "",
+                    block: "",
+                };
+                i++;
+                while (i<block_code.length&&block_code[i]==" ") {i++;}
+                if (!block_code.startsWith('ctrl:',i)) {
+                    this.error(i,block_code,["制御構造の定義に問題があります0"]);
+                    return false;
+                }
+                i+=5;
+                // '('
+                if (block_code[i]!='(') {
+                    this.error(i,block_code,["制御構造の定義に問題があります1","条件の括弧がありません"]);
+                    return false;
+                }
+                // <condition> ')'
+                i++;
+                while (i<block_code.length&&block_code[i]!=")") {
+                    ctrl.condition += block_code[i];
+                    i++;
+                }
+                // ':'
+                i++;
+                if (block_code[i]!=':') {
+                    this.error(i,block_code,["制御構造の定義に問題があります2"]);
+                    return false;
+                }
+                i++;
+                if (block_code.startsWith('if',i)) { // <struct-if> ::= 'if' [ <space> ] '{' <block> '}'
+                    console.log("if");
+                    ctrl.type = "if";
+                }
+                else if (block_code.startsWith('while',i)) { // <struct-while> ::= 'while' [ <space> ] '{' <block> '}'
+                    console.log("while");
+                    ctrl.type = "while";
+                }
+                else {
+                    this.error(i,block_code,["制御構造の定義に問題があります3","制御構造の型がありません"]);
+                    return false;
+                }
+                console.log(ctrl)
+            }
+            else { // <stat>
+                // <stat> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> ) ';'
+                while (i<block_code.length) {
+                    if (block_code[i]==";") {
+                        i++;
+                        break;
+                    }
+                    i++;
+                }
             }
         }
     }
@@ -96,7 +156,8 @@ class NLPparse {
                 i++;
                 // '('
                 if (this.code[i]!='(') {
-                    this.error(i,["引数の括弧がありません"]);
+                    this.error(i,this.code,["関数の定義に問題があります1","引数の括弧がありません"]);
+                    return false;
                 }
                 // <func-arg-def> ')'
                 i++;
@@ -107,7 +168,7 @@ class NLPparse {
                 // ':fn:'
                 i++;
                 if (!this.code.startsWith(':fn:',i)) {
-                    this.error(i,["関数の定義に問題があります1"]);
+                    this.error(i,this.code,["関数の定義に問題があります1"]);
                     return false;
                 }
                 i+=4;
@@ -132,7 +193,7 @@ class NLPparse {
                 }
                 // '{'
                 if (!this.code.startsWith('{',i)) {
-                    this.error(i,["関数の定義に問題があります2"]);
+                    this.error(i,this.code,["関数の定義に問題があります2"]);
                     return false;
                 }
                 i+=1;
@@ -180,7 +241,7 @@ class NLPparse {
                     i++;
                 }
                 if (this.functions[func.name]!=null) {
-                    this.error(i,["同じ名前の関数は定義できません",func.name]);
+                    this.error(i,this.code,["関数の定義に問題があります1","同じ名前の関数は定義できません",func.name]);
                     return false;
                 }
                 this.functions[func.name] = func;
@@ -191,7 +252,7 @@ class NLPparse {
             else if (this.code[i]=="\n"|(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++)|this.code[i]=="\0") {
             }
             else {
-                this.error(i,["トップレベルに関数、改行、空白以外が存在します'",this.code[i],"'"]);
+                this.error(i,this.code,["関数の定義に問題があります1","トップレベルに関数、改行、空白以外が存在します'",this.code[i],"'"]);
                 return false;
             }
             i++;
@@ -244,7 +305,7 @@ testcode = `
     1 => !int: x;
     1 => !int: y;
     1 => !int: z;
-    while (x max <) {
+    !ctrl:(x max <):while {
         (x)out;
         y x + => z;
         y => x;

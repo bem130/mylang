@@ -72,12 +72,12 @@
 <operator-general> ::= ( '=' , '!=' )
 ```
 
-## 構造
+## 制御構造
 ```bnf
-<control> ::= <struct-if> | <struct-while>
+<control> ::= '!' [ <space> ] 'ctrl:(' <condition> '):' ( <struct-if> | <struct-while> )
 <condition> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> )
-<struct-if> ::= '!' [ <space> ] '(' <condition> '):if' [ <space> ] '{' <block> '}'
-<struct-while> ::= '!' [ <space> ] '(' <condition> '):while' [ <space> ] '{' <block> '}'
+<struct-if> ::= 'if' [ <space> ] '{' <block> '}'
+<struct-while> ::= 'while' [ <space> ] '{' <block> '}'
 ```
 
 ## 型の即値
