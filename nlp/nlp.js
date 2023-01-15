@@ -217,6 +217,7 @@ class NLPparse {
                     var_type: "",
                     var_name: "",
                 }
+                let assign = false;
                 while (i<block_code.length) {
                     if (block_code[i]==";") {
                         i++;
@@ -224,9 +225,25 @@ class NLPparse {
                     }
                     else if (block_code.startsWith('=>',i)) {
                         i+=2;
+                        assign = true;
+                        break;
                     }
                     stat.stat += block_code[i];
                     i++;
+                }
+                if (assign) {
+                    while (i<block_code.length&&block_code[i]==" ") {i++;}
+                    while (i<block_code.length) {
+                        if (block_code[i]==";") {
+                            i++;
+                            break;
+                        }
+                        stat.assign += block_code[i];
+                        i++;
+                    }
+                }
+                else {
+                    stat.assign = false;
                 }
                 list.stats.push(stat);
             }
@@ -400,6 +417,7 @@ testcode = `
     !ctrl:(true):if {
         (100)run;
     }
+    (100)run;
     "Hello World!" => !string: hw;
 }
 // comment
