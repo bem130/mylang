@@ -34,7 +34,7 @@
 
 ## 文
 ```bnf
-<stat> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> ) ';'
+<stat> ::= ( <stat-var-declaration> | <stat-var-declaration-assign> | <stat-var-assign> | <stat-run-expr> ) ';'
 ```
 ### 変数の宣言
 ```bnf
@@ -42,7 +42,7 @@
 ```
 ### 初期化付の変数の宣言
 ```bnf
-<stat-var-declaration> ::= <expr> [ <space> ] '=>' [ <space> ] '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
+<stat-var-declaration-assign> ::= <expr> [ <space> ] '=>' [ <space> ] '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
 ```
 ### 変数への代入
 ```bnf

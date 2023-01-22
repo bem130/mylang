@@ -203,20 +203,18 @@ class NLPparse {
                         decl.var_name += block_code[i];
                         i++;
                     }
-                    console.log(decl)
                     if (list.var[decl.var_name]!=null) {
-                        this.error(i,block_code,["変数の定義に問題があります","同じブロック内で、同じ名前の変数は定義できません"]);
+                        this.error(i,block_code,["変数の定義に問題があります","同じブロック内で、同じ名前の変数は定義できません",decl.var_name]);
                         return false;
                     }
                     list.var[decl.var_name] = decl;
                 }
             }
             else { // <stat>
-                // <stat> ::= ( <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> ) ';'
-                let decl = {
-                    var_type: "",
-                    var_name: "",
-                }
+                // <stat> ::= ( <stat-var-declaration-assign> | <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> ) ';' // <stat-var-declaration> は、上位の場合分けで別処理になっている
+                // <stat-var-declaration-assign> ::= <expr> [ <space> ] '=>' [ <space> ] '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
+                // <stat-var-assign> ::= <expr> [ <space> ]  '=>' [ <space> ]  <var-name> [ <space> ]
+                // <stat-run-expr> ::= <expr> [ <space> ]
                 let assign = false;
                 while (i<block_code.length) {
                     if (block_code[i]==";") {
@@ -231,7 +229,7 @@ class NLPparse {
                     stat.stat += block_code[i];
                     i++;
                 }
-                if (assign) {
+                if (assign) { // <stat-var-assign> , <stat-var-declaration-assign>
                     while (i<block_code.length&&block_code[i]==" ") {i++;}
                     while (i<block_code.length) {
                         if (block_code[i]==";") {
@@ -240,6 +238,34 @@ class NLPparse {
                         }
                         stat.assign += block_code[i];
                         i++;
+                    }
+                    let si = 0;
+                    if (stat.assign[si]=="!") { // '!' // <stat-var-declaration-assign>
+                        let decl = {
+                            var_type: "",
+                            var_name: "",
+                        }
+                        si++;
+                        while (si<stat.assign.length&&stat.assign[si]==" ") {si++;}
+                        while (si<stat.assign.length&&stat.assign[si]!=":") {
+                            decl.var_type += stat.assign[si];
+                            si++;
+                        }
+                        if (stat.assign[si]!=":") {
+                            this.error(i,this.code,["変数の定義に問題があります","コロンがありません"]);
+                        }
+                        si++;
+                        while (si<stat.assign.length&&stat.assign[si]==" ") {si++;}
+                        while (si<stat.assign.length) {
+                            decl.var_name += stat.assign[si];
+                            si++;
+                        }
+                        if (list.var[decl.var_name]!=null) {
+                            this.error(i,block_code,["変数の定義に問題があります","同じブロック内で、同じ名前の変数は定義できません",decl.var_name]);
+                            return false;
+                        }
+                        list.var[decl.var_name] = decl;
+                        stat.assign = decl.var_name;
                     }
                 }
                 else {
@@ -419,19 +445,24 @@ testcode = `
     }
     (100)run;
     "Hello World!" => !string: hw;
+    return;
 }
 // comment
 !void:(int:max):fn: run {
     !int: x;
     1 => x;
     1 => !int: y;
-    1 => !int: z;
+    2 ()number - => !int: z;
     !ctrl:(x max <):while {
         (x)out;
         y x + => z;
         y => x;
         z => y;
     }
+    return;
+}
+!int:():fn:number {
+    return 1;
 }
 `
 // testcode = `
