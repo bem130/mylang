@@ -94,7 +94,7 @@
 ```
 ### 文字列
 ```bnf
-<string> ::= <string-symbol> <string-letters> <string-symbol>
+<string> ::= <string-symbol> <string-letters> <string-symbol> <string-type>
 <string-symbol> ::= '"'
 <string-letters> ::= { <string-letter> }
 ; <string-letter> 内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにエスケープする

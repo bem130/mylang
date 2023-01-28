@@ -4,12 +4,12 @@ class NLPparse {
         this.delete_comments();
         console.log(this.code)
         this.functions = {};
-        this.toplevel();
+        this.toplevel_parse();
         console.log(this.functions)
         let functionnames = Object.keys(this.functions);
         for (let name of functionnames) {
             this.info([name,"関数の内容を読み込みます"]);
-            let block = this.block(this.functions[name].block);
+            let block = this.block_parse(this.functions[name].block);
             console.log(block)
             if (block==false) {
                 return false;
@@ -70,7 +70,70 @@ class NLPparse {
     info(msg) {
         console.log(`[info]`,...msg);
     }
-    block(block_code) {
+    stat_parse(stat_code,ofs) {
+        let list = [];
+        let i = 0;
+        let code = "";
+        while (i<stat_code.length+1) {
+            if (stat_code[i]==" ") {
+                // console.log(code,0)
+                if (code!="") {
+                    list.push(code);
+                }
+                code = "";
+                i++;
+            }
+            else if (i==stat_code.length) {
+                // console.log(code,0)
+                if (code!="") {
+                    list.push(code);
+                }
+                code = "";
+            }
+            // 文字列
+            if (stat_code[i]=="\"") { // <string-symbol> // 文字列内の括弧を無視する
+                // <string> ::= <string-symbol> <string-letters> <string-symbol>
+                // <string-symbol> ::= '"'
+                // <string-letters> ::= { <string-letter> }
+                // ; <string-letter>内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにバックスラッシュを付ける
+                // ; <string-letter>内で '\' を使用する場合は、 '\\' のように2つ続ける
+                // ; エスケープは '\' と1文字の合計2文字で構成される
+                code += stat_code[i];
+                if (code[0]!="\"") {
+                    console.log(" [error]")
+                }
+                i++;
+                //  <string-letters> <string-symbol>
+                while (i<stat_code.length) {
+                    // ; <string-letter> 内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにエスケープする
+                    // ; <string-letter> 内で '\' を使用する場合は、 '\\' のようにエスケープする
+                    // ; <string-letter> 内で、エスケープに使われない '\' は認められない
+                    if (stat_code[i]=="\\") {
+                        code += stat_code[i];
+                        // ; エスケープは '\' と1文字の合計2文字で構成される
+                        i++;
+                    }
+                    if (stat_code[i]=="\"") { // <string-symbol>
+                        code += stat_code[i];
+                        break;
+                    }
+                    code += stat_code[i];
+                    i++;
+                }
+            }
+            else {
+                code += stat_code[i];
+            }
+            i++;
+        }
+        // if (true) {
+        //     console.log(code,0)
+        //     code = "";
+        //     i++;
+        // }
+        return list;
+    }
+    block_parse(block_code) {
         // <block> ::= { <blank-lines> ( <stat> | <control>) } <blank-lines>
         let list = {var:{},stats:[]};
         let i = 0;
@@ -108,6 +171,7 @@ class NLPparse {
                         ctrl.condition += block_code[i];
                         i++;
                     }
+                    ctrl.condition = this.stat_parse(ctrl.condition,i)
                     // ':'
                     i++;
                     if (block_code[i]!=':') {
@@ -166,7 +230,7 @@ class NLPparse {
                         i++;
                     }
                     i++;
-                    ctrl.block = this.block(ctrl.block);
+                    ctrl.block = this.block_parse(ctrl.block);
                     if (ctrl.block==false) {
                         return false;
                     }
@@ -271,12 +335,13 @@ class NLPparse {
                 else {
                     stat.assign = false;
                 }
+                stat.stat = this.stat_parse(stat.stat,i);
                 list.stats.push(stat);
             }
         }
         return list;
     }
-    toplevel() {
+    toplevel_parse() {
         // <code> ::= { <blank-lines> <func> <blank-lines> }
         let i = 0;
         while (i<this.code.length) {
@@ -465,6 +530,22 @@ testcode = `
     return 1;
 }
 `
+// testcode = `
+// !void:():fn:main {
+//     1 5 + 5 8 - *;
+//     (1,5)+ (5,8)- * ;
+//     "aaa" => !string: a;
+//     "aaa";
+//     "aaa" ;
+//     "aaa"a;
+//     "aaa" a;
+//     a "aaa" a;
+//     a "aaa";
+//     a"aaa";
+//     a"aaa"a;
+//     "aaa"a a;
+// }
+// `
 // testcode = `
 // !void:():fn:main{(100)run;}
 // !void:(int:max):fn:run{1 =>!int:x;1 =>!int:y;1 =>!int:z;while(x max <){(x)out;y x + =>z;y =>x;z =>y;}}
