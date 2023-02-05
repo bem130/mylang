@@ -23,7 +23,7 @@
 ```
 ## 関数の呼び出し
 ```bnf
-<func-call> ::= '(' <func-arg-def> ')' <func-name>
+<func-call> ::= '(' <func-call-args> ')' <func-name>
 ```
 
 ## ブロック

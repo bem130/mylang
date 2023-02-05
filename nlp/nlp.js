@@ -5,16 +5,19 @@ class NLPparse {
         console.log(this.code)
         this.functions = {};
         this.toplevel_parse();
+        this.parsed = {};
         console.log(this.functions)
         let functionnames = Object.keys(this.functions);
         for (let name of functionnames) {
             this.info([name,"関数の内容を読み込みます"]);
             let block = this.block_parse(this.functions[name].block);
             console.log(block)
+            this.parsed[name] = block;
             if (block==false) {
                 return false;
             }
         }
+        return this.parsed;
     }
     delete_comments() {
         let code = "";
@@ -78,7 +81,7 @@ class NLPparse {
             if (stat_code[i]==" ") {
                 // console.log(code,0)
                 if (code!="") {
-                    list.push(code);
+                    list.push(code,ofs);
                 }
                 code = "";
                 i++;
@@ -86,7 +89,7 @@ class NLPparse {
             else if (i==stat_code.length) {
                 // console.log(code,0)
                 if (code!="") {
-                    list.push(code);
+                    list.push(code,ofs);
                 }
                 code = "";
             }
@@ -468,6 +471,43 @@ class NLPparse {
     }
 }
 
+class NLPcompile_NVE {
+    constructor(code) {
+        this.parsed = new NLPparse(code);
+        console.log(this.parsed);
+        this.nameeval();
+    }
+    nameeval() {
+        let functionnames = Object.keys(this.parsed);
+        for (let name of functionnames) {
+            console.log("関数:",name);
+            let block = this.parsed[name];
+            console.log(block)
+            let vars = Object.keys(block.var);
+            console.log("変数:",vars);
+        }
+    }
+    makecode() {
+        this.code = [];
+        this.code.push(["jmp","#callmain"]);
+        this.code.push(["fram",0]);
+
+        let functionnames = Object.keys(this.parsed);
+        for (let name of functionnames) {
+            let block = this.parsed[name];
+            console.log(block)
+            this.code.push([name+":"]);
+            let vars = Object.keys(block.var);
+            console.log("変数:",vars);
+            this.code.push(["fram",vars.length]);
+            this.code.push(["pop",vars.length]);
+        }
+        this.code.push(["#callmain"+":"]);
+        this.code.push(["pop",0]);
+        console.log(this.code)
+    }
+}
+
 {
 let testcode = `
 !void:fn:main(){
@@ -506,9 +546,9 @@ testcode = `
 testcode = `
 !void:():fn:main {
     !ctrl:(true):if {
-        (100)run;
+        100 run;
     }
-    (100)run;
+    100 run;
     "Hello World!" => !string: hw;
     return;
 }
@@ -517,10 +557,10 @@ testcode = `
     !int: x;
     1 => x;
     1 => !int: y;
-    2 ()number - => !int: z;
+    2 number - => !int: z;
     !ctrl:(x max <):while {
-        (x)out;
-        y x + => z;
+        x out;
+        y x a + => z;
         y => x;
         z => y;
     }
@@ -550,5 +590,6 @@ testcode = `
 // !void:():fn:main{(100)run;}
 // !void:(int:max):fn:run{1 =>!int:x;1 =>!int:y;1 =>!int:z;while(x max <){(x)out;y x + =>z;y =>x;z =>y;}}
 // `
-new NLPparse(testcode);
+//new NLPparse(testcode);
+new NLPcompile_NVE(testcode);
 }
