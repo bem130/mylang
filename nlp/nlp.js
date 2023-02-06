@@ -570,26 +570,47 @@ testcode = `
     return 1;
 }
 `
-// testcode = `
-// !void:():fn:main {
-//     1 5 + 5 8 - *;
-//     (1,5)+ (5,8)- * ;
-//     "aaa" => !string: a;
-//     "aaa";
-//     "aaa" ;
-//     "aaa"a;
-//     "aaa" a;
-//     a "aaa" a;
-//     a "aaa";
-//     a"aaa";
-//     a"aaa"a;
-//     "aaa"a a;
-// }
-// `
-// testcode = `
-// !void:():fn:main{(100)run;}
-// !void:(int:max):fn:run{1 =>!int:x;1 =>!int:y;1 =>!int:z;while(x max <){(x)out;y x + =>z;y =>x;z =>y;}}
-// `
-//new NLPparse(testcode);
+testcode = `
+// グローバル変数
+!global:int: zzz;
+// 定数
+!const:int: one = 1;
+// 型
+!type: decimal {
+    !uint: num;
+    !ubyte: point;
+    !bool: sign;
+}
+
+!void:():fn:main {
+    zzz out;
+    !ctrl:(true):if {
+        -1 => zzz;
+        100 run;
+    }
+    100 run;
+    "Hello World!" => !string: hw;
+    return;
+}
+// comment
+!void:(int:max):fn: run {
+    zzz out;
+    !int: x;
+    one => x;
+    one => !int: y;
+    2 number - => !int: z;
+    !ctrl:(x max <):while {
+        x out;
+        y x a + => z;
+        y => x;
+        z => y;
+    }
+    x => zzz;
+    return;
+}
+!int:():fn:number {
+    return one;
+}
+`
 new NLPcompile_NVE(testcode);
 }
