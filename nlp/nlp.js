@@ -3,10 +3,13 @@ class NLPparse {
         this.code = code+"\0";
         this.delete_comments();
         console.log(this.code)
+        this.names = [];
         this.functions = {};
+        this.globalvars = {};
         this.toplevel_parse();
         this.parsed = {};
         console.log(this.functions)
+        console.log(this.globalvars)
         let functionnames = Object.keys(this.functions);
         for (let name of functionnames) {
             this.info([name,"関数の内容を読み込みます"]);
@@ -17,7 +20,15 @@ class NLPparse {
                 return false;
             }
         }
+        this.name_resolution();
+        console.log("names",this.names)
         return this.parsed;
+    }
+    error(i,level,msg) {
+        console.error(`[error:${i}]`,...msg);
+    }
+    info(msg) {
+        console.log(`[info]`,...msg);
     }
     delete_comments() {
         let code = "";
@@ -67,74 +78,178 @@ class NLPparse {
         }
         this.code = code;
     }
-    error(i,level,msg) {
-        console.error(`[error:${i}]`,...msg);
-    }
-    info(msg) {
-        console.log(`[info]`,...msg);
-    }
-    stat_parse(stat_code,ofs) {
-        let list = [];
+    toplevel_parse() {
+        // <code> ::= { <blank-lines> <func> <blank-lines> }
         let i = 0;
-        let code = "";
-        while (i<stat_code.length+1) {
-            if (stat_code[i]==" ") {
-                // console.log(code,0)
-                if (code!="") {
-                    list.push(code,ofs);
-                }
-                code = "";
+        while (i<this.code.length) {
+            if (this.code[i]=='!') { // '!'
+                // [ <space> ]
                 i++;
-            }
-            else if (i==stat_code.length) {
-                // console.log(code,0)
-                if (code!="") {
-                    list.push(code,ofs);
-                }
-                code = "";
-            }
-            // 文字列
-            if (stat_code[i]=="\"") { // <string-symbol> // 文字列内の括弧を無視する
-                // <string> ::= <string-symbol> <string-letters> <string-symbol>
-                // <string-symbol> ::= '"'
-                // <string-letters> ::= { <string-letter> }
-                // ; <string-letter>内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにバックスラッシュを付ける
-                // ; <string-letter>内で '\' を使用する場合は、 '\\' のように2つ続ける
-                // ; エスケープは '\' と1文字の合計2文字で構成される
-                code += stat_code[i];
-                if (code[0]!="\"") {
-                    console.log(" [error]")
-                }
-                i++;
-                //  <string-letters> <string-symbol>
-                while (i<stat_code.length) {
-                    // ; <string-letter> 内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにエスケープする
-                    // ; <string-letter> 内で '\' を使用する場合は、 '\\' のようにエスケープする
-                    // ; <string-letter> 内で、エスケープに使われない '\' は認められない
-                    if (stat_code[i]=="\\") {
-                        code += stat_code[i];
-                        // ; エスケープは '\' と1文字の合計2文字で構成される
+                while (i<this.code.length&&this.code[i]==" ") {i++;}
+                // 'fn:'
+                if (this.code.startsWith('fn:',i)) {
+                    //<func> ::= '!' [ <space> ] 'fn:' [ <space> ] <var-type> ':(' <func-arg-def> '):' [ <space> ] <func-name> { ( <space> | <eol> ) } '{' <block> '}'
+                    let func = {
+                        name: "",
+                        args: "",
+                        return: "",
+                        block: "",
+                        identity: null,
+                    };
+                    i+=3
+                    // [ <space> ]
+                    while (i<this.code.length&&this.code[i]==" ") {i++;}
+                    // <var-type> ':'
+                    while (i<this.code.length&&this.code[i]!=":") {
+                        func.return += this.code[i];
                         i++;
                     }
-                    if (stat_code[i]=="\"") { // <string-symbol>
-                        code += stat_code[i];
-                        break;
-                    }
-                    code += stat_code[i];
                     i++;
+                    // '('
+                    if (this.code[i]!='(') {
+                        this.error(i,this.code,["関数の定義に問題があります1","引数の括弧がありません"]);
+                        return false;
+                    }
+                    // <func-arg-def> ')'
+                    i++;
+                    while (i<this.code.length&&this.code[i]!=")") {
+                        func.args += this.code[i];
+                        i++;
+                    }
+                    i+=2;
+                    // [ <space> ]
+                    while (i<this.code.length&&this.code[i]==" ") {i++;}
+                    // <func-name> { ( <space> | <eol> ) } 
+                    while (i<this.code.length) {
+                        if (this.code[i]=="\n"|(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++)) {
+                            break;
+                        }
+                        if (this.code[i]==" ") {
+                            break;
+                        }
+                        func.name += this.code[i];
+                        i++;
+                    }
+                    while (i<this.code.length) {
+                        if (!(this.code[i]==" "||(this.code[i]=="\n"|(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++)))) {
+                            break;
+                        }
+                        i++;
+                    }
+                    // '{'
+                    if (!this.code.startsWith('{',i)) {
+                        this.error(i,this.code,["関数の定義に問題があります2"]);
+                        return false;
+                    }
+                    i+=1;
+                    // <block> '}'
+                    let brccnt = 1;
+                    while (i<this.code.length) {
+                        // <block> ::= <stat> { <blank-lines> <stat> }
+                        // ; <block> の中では、 <string> の中以外で組になっていない '{' '}' が出てくることはない
+                        if (this.code[i]=="\"") { // <string-symbol> // 文字列内の括弧を無視する
+                            // <string> ::= <string-symbol> <string-letters> <string-symbol>
+                            // <string-symbol> ::= '"'
+                            // <string-letters> ::= { <string-letter> }
+                            // ; <string-letter>内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにバックスラッシュを付ける
+                            // ; <string-letter>内で '\' を使用する場合は、 '\\' のように2つ続ける
+                            // ; エスケープは '\' と1文字の合計2文字で構成される
+                            func.block += this.code[i];
+                            i++;
+                            //  <string-letters> <string-symbol>
+                            while (i<this.code.length) {
+                                // ; <string-letter> 内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにエスケープする
+                                // ; <string-letter> 内で '\' を使用する場合は、 '\\' のようにエスケープする
+                                // ; <string-letter> 内で、エスケープに使われない '\' は認められない
+                                if (this.code[i]=="\\") {
+                                    func.block += this.code[i];
+                                    // ; エスケープは '\' と1文字の合計2文字で構成される
+                                    i++;
+                                }
+                                if (this.code[i]=="\"") { // <string-symbol>
+                                    break;
+                                }
+                                func.block += this.code[i];
+                                i++;
+                            }
+                        }
+                        else if (this.code[i]=="{") {
+                            brccnt++;
+                        }
+                        else if (this.code[i]=="}") {
+                            brccnt--;
+                        }
+                        if (brccnt==0) {
+                            break;
+                        }
+                        func.block += this.code[i];
+                        i++;
+                    }
+                    if (this.functions[func.name]!=null) {
+                        this.error(i,this.code,["関数の定義に問題があります1","同じ名前の関数は定義できません",func.name]);
+                        return false;
+                    }
+                    this.functions[func.name] = func;
+                    func.identity = this.names.length;
+                    this.names.push(func);
+                    this.info([func.name,"関数を読み込みました"]);
+                }
+                else if (this.code.startsWith('global:',i)) {
+                    // <global-var-declaration> ::= '!' [ <space> ] 'global:' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ] ';'
+                    i+=7;
+                    let global = {
+                        type: "",
+                        name: "",
+                        identity: null,
+                    }
+                    // [ <space> ]
+                    i++;
+                    while (i<this.code.length&&this.code[i]==" ") {i++;}
+                    i--;
+                    // <var-type> ':'
+                    while (i<this.code.length&&this.code[i]!=":") {
+                        global.type += this.code[i];
+                        i++;
+                    }
+                    // [ <space> ]
+                    i++;
+                    while (i<this.code.length&&this.code[i]==" ") {i++;}
+                    // <var-name> [ <space> ] ';'
+                        // <var-name> (' '|';')
+                    while (i<this.code.length&&this.code[i]!=" "&&this.code[i]!=";") {
+                        global.name += this.code[i];
+                        i++;
+                    }
+                    if (this.code[i]==" ") {
+                        while (i<this.code.length&&this.code[i]==" ") {i++;}
+                    }
+                    if (this.code[i]!=";") {
+                        this.error(i,this.code,["グローバル変数の定義に問題があります"]);
+                    }
+                    if (this.globalvars[global.name]!=null) {
+                        this.error(i,this.code,["グローバル変数の定義に問題があります1","同じ名前のグローバル変数は定義できません",global.name]);
+                        return false;
+                    }
+                    this.globalvars[global.name] = global;
+                    global.identity = this.names.length;
+                    this.names.push(global);
+                    this.info([global.name,"グローバル変数を読み込みました"]);
+                }
+                else {
+                    this.error(i,this.code,["不明なトップレベル構造です"]);
+                    return false;
                 }
             }
+            else if (this.code[i]==" ") {
+            }
+            else if (this.code[i]=="\n"|(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++)|this.code[i]=="\0") {
+            }
             else {
-                code += stat_code[i];
+                this.error(i,this.code,["関数の定義に問題があります1","トップレベルに関数、改行、空白以外が存在します'",this.code[i],"'"]);
+                return false;
             }
             i++;
         }
-        // if (true) {
-        //     console.log(code,0)
-        //     code = "";
-        //     i++;
-        // }
-        return list;
     }
     block_parse(block_code) {
         // <block> ::= { <blank-lines> ( <stat> | <control>) } <blank-lines>
@@ -244,6 +359,7 @@ class NLPparse {
                     let decl = {
                         var_type: "",
                         var_name: "",
+                        identity: null,
                     }
                     while (i<block_code.length&&block_code[i]!=":") {
                         decl.var_type += block_code[i];
@@ -275,6 +391,8 @@ class NLPparse {
                         return false;
                     }
                     list.var[decl.var_name] = decl;
+                    decl.identity = this.names.length;
+                    this.names.push(decl);
                 }
             }
             else { // <stat>
@@ -311,6 +429,7 @@ class NLPparse {
                         let decl = {
                             var_type: "",
                             var_name: "",
+                            identity: null,
                         }
                         si++;
                         while (si<stat.assign.length&&stat.assign[si]==" ") {si++;}
@@ -332,6 +451,8 @@ class NLPparse {
                             return false;
                         }
                         list.var[decl.var_name] = decl;
+                        decl.identity = this.names.length;
+                        this.names.push(decl);
                         stat.assign = decl.var_name;
                     }
                 }
@@ -344,130 +465,70 @@ class NLPparse {
         }
         return list;
     }
-    toplevel_parse() {
-        // <code> ::= { <blank-lines> <func> <blank-lines> }
+    stat_parse(stat_code,ofs) {
+        let list = [];
         let i = 0;
-        while (i<this.code.length) {
-            // <func> ::= '!' [ <space> ] <var-type> ':(' <func-arg-def> '):fn:' [ <space> ] <func-name> { ( <space> | <eol> ) } '{' <block> '}'
-            if (this.code[i]=='!') { // '!'
-                let func = {
-                    name: "",
-                    args: "",
-                    return: "",
-                    block: "",
-                };
-                // [ <space> ]
+        let code = "";
+        while (i<stat_code.length+1) {
+            if (stat_code[i]==" ") {
+                // console.log(code,0)
+                if (code!="") {
+                    list.push(code);
+                }
+                code = "";
                 i++;
-                while (i<this.code.length&&this.code[i]==" ") {i++;}
-                // <var-type> ':'
-                while (i<this.code.length&&this.code[i]!=":") {
-                    func.return += this.code[i];
-                    i++;
+            }
+            else if (i==stat_code.length) {
+                // console.log(code,0)
+                if (code!="") {
+                    list.push(code);
+                }
+                code = "";
+            }
+            // 文字列
+            if (stat_code[i]=="\"") { // <string-symbol> // 文字列内の括弧を無視する
+                // <string> ::= <string-symbol> <string-letters> <string-symbol>
+                // <string-symbol> ::= '"'
+                // <string-letters> ::= { <string-letter> }
+                // ; <string-letter>内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにバックスラッシュを付ける
+                // ; <string-letter>内で '\' を使用する場合は、 '\\' のように2つ続ける
+                // ; エスケープは '\' と1文字の合計2文字で構成される
+                code += stat_code[i];
+                if (code[0]!="\"") {
+                    console.log(" [error]")
                 }
                 i++;
-                // '('
-                if (this.code[i]!='(') {
-                    this.error(i,this.code,["関数の定義に問題があります1","引数の括弧がありません"]);
-                    return false;
-                }
-                // <func-arg-def> ')'
-                i++;
-                while (i<this.code.length&&this.code[i]!=")") {
-                    func.args += this.code[i];
-                    i++;
-                }
-                // ':fn:'
-                i++;
-                if (!this.code.startsWith(':fn:',i)) {
-                    this.error(i,this.code,["関数の定義に問題があります1"]);
-                    return false;
-                }
-                i+=4;
-                // [ <space> ]
-                while (i<this.code.length&&this.code[i]==" ") {i++;}
-                // <func-name> { ( <space> | <eol> ) } 
-                while (i<this.code.length) {
-                    if (this.code[i]=="\n"|(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++)) {
-                        break;
-                    }
-                    if (this.code[i]==" ") {
-                        break;
-                    }
-                    func.name += this.code[i];
-                    i++;
-                }
-                while (i<this.code.length) {
-                    if (!(this.code[i]==" "||(this.code[i]=="\n"|(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++)))) {
-                        break;
-                    }
-                    i++;
-                }
-                // '{'
-                if (!this.code.startsWith('{',i)) {
-                    this.error(i,this.code,["関数の定義に問題があります2"]);
-                    return false;
-                }
-                i+=1;
-                // <block> '}'
-                let brccnt = 1;
-                while (i<this.code.length) {
-                    // <block> ::= <stat> { <blank-lines> <stat> }
-                    // ; <block> の中では、 <string> の中以外で組になっていない '{' '}' が出てくることはない
-                    if (this.code[i]=="\"") { // <string-symbol> // 文字列内の括弧を無視する
-                        // <string> ::= <string-symbol> <string-letters> <string-symbol>
-                        // <string-symbol> ::= '"'
-                        // <string-letters> ::= { <string-letter> }
-                        // ; <string-letter>内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにバックスラッシュを付ける
-                        // ; <string-letter>内で '\' を使用する場合は、 '\\' のように2つ続ける
+                //  <string-letters> <string-symbol>
+                while (i<stat_code.length) {
+                    // ; <string-letter> 内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにエスケープする
+                    // ; <string-letter> 内で '\' を使用する場合は、 '\\' のようにエスケープする
+                    // ; <string-letter> 内で、エスケープに使われない '\' は認められない
+                    if (stat_code[i]=="\\") {
+                        code += stat_code[i];
                         // ; エスケープは '\' と1文字の合計2文字で構成される
-                        func.block += this.code[i];
                         i++;
-                        //  <string-letters> <string-symbol>
-                        while (i<this.code.length) {
-                            // ; <string-letter> 内で<string-symbol>を使用する場合は、( '\' <string-symbol> )のようにエスケープする
-                            // ; <string-letter> 内で '\' を使用する場合は、 '\\' のようにエスケープする
-                            // ; <string-letter> 内で、エスケープに使われない '\' は認められない
-                            if (this.code[i]=="\\") {
-                                func.block += this.code[i];
-                                // ; エスケープは '\' と1文字の合計2文字で構成される
-                                i++;
-                            }
-                            if (this.code[i]=="\"") { // <string-symbol>
-                                break;
-                            }
-                            func.block += this.code[i];
-                            i++;
-                        }
                     }
-                    else if (this.code[i]=="{") {
-                        brccnt++;
-                    }
-                    else if (this.code[i]=="}") {
-                        brccnt--;
-                    }
-                    if (brccnt==0) {
+                    if (stat_code[i]=="\"") { // <string-symbol>
+                        code += stat_code[i];
                         break;
                     }
-                    func.block += this.code[i];
+                    code += stat_code[i];
                     i++;
                 }
-                if (this.functions[func.name]!=null) {
-                    this.error(i,this.code,["関数の定義に問題があります1","同じ名前の関数は定義できません",func.name]);
-                    return false;
-                }
-                this.functions[func.name] = func;
-                this.info([func.name,"関数を読み込みました"]);
-            }
-            else if (this.code[i]==" ") {
-            }
-            else if (this.code[i]=="\n"|(this.code[i]=="\r"&&this.code[i+1]=="\n"&&i++)|this.code[i]=="\0") {
             }
             else {
-                this.error(i,this.code,["関数の定義に問題があります1","トップレベルに関数、改行、空白以外が存在します'",this.code[i],"'"]);
-                return false;
+                code += stat_code[i];
             }
             i++;
         }
+        // if (true) {
+        //     console.log(code,0)
+        //     code = "";
+        //     i++;
+        // }
+        return list;
+    }
+    name_resolution() {
     }
 }
 
@@ -475,7 +536,7 @@ class NLPcompile_NVE {
     constructor(code) {
         this.parsed = new NLPparse(code);
         console.log(this.parsed);
-        this.nameeval();
+        //this.nameeval();
     }
     nameeval() {
         let functionnames = Object.keys(this.parsed);
@@ -572,17 +633,18 @@ testcode = `
 `
 testcode = `
 // グローバル変数
-!global:int: zzz;
+!  global:int: zzz;
+!  global:int: abc;
 // 定数
-!const:int: one = 1;
+//!const:int: one = 1;
 // 型
-!type: decimal {
-    !uint: num;
-    !ubyte: point;
-    !bool: sign;
-}
+//!type: decimal {
+//    !uint: num;
+//    !ubyte: point;
+//    !bool: sign;
+//}
 
-!void:():fn:main {
+! fn: void:():main {
     zzz out;
     !ctrl:(true):if {
         -1 => zzz;
@@ -593,7 +655,7 @@ testcode = `
     return;
 }
 // comment
-!void:(int:max):fn: run {
+!fn:void:(int:max):run {
     zzz out;
     !int: x;
     one => x;
@@ -608,7 +670,10 @@ testcode = `
     x => zzz;
     return;
 }
-!int:():fn:number {
+!fn:int:():number {
+    !ctrl:(true):if {
+        1 => !int: one;
+    }
     return one;
 }
 `

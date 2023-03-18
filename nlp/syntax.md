@@ -17,10 +17,15 @@
 
 ## 関数の定義
 ```bnf
-<func> ::= '!' [ <space> ] <var-type> ':(' <func-arg-def> '):fn:' [ <space> ] <func-name> { ( <space> | <eol> ) } '{' <block> '}'
+<func> ::= '!' [ <space> ] 'fn:' [ <space> ] <var-type> ':(' <func-arg-def> '):' [ <space> ] <func-name> { ( <space> | <eol> ) } '{' <block> '}'
 <func-def-arg> ::= <var-type> ':' <var-name>
 <func-arg-def> ::= ( <empty-text> | <func-def-arg> | <func-def-arg> { ',' <func-def-arg> } )
 ```
+### グローバル変数の宣言
+```bnf
+<global-var-declaration> ::= '!' [ <space> ] 'global:' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ] ';'
+```
+
 ## 関数の呼び出し
 ```bnf
 <func-call> ::= '(' <func-call-args> ')' <func-name>
