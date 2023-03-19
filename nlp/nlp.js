@@ -463,6 +463,7 @@ class NLPparse {
                         this.names.push(decl);
                         stat.assign = decl.name;
                     }
+                    stat.assign = [stat.assign,null]
                 }
                 else {
                     stat.assign = false;
@@ -539,6 +540,20 @@ class NLPparse {
     name_resolution(block,namelist) {
         console.log("resolution",block,namelist)
         let newnamelist = namelist.concat(block.var);
+        for (let instats of block.stats) {
+            if (instats.type=="stat") {
+                console.log("stat",instats)
+            }
+            else if (instats.type=="while") {
+                console.log("while",instats)
+                this.name_resolution(instats.block,newnamelist);
+            }
+            else if (instats.type=="if") {
+                console.log("if",instats)
+                this.name_resolution(instats.block,newnamelist);
+            }
+        }
+        console.log("--")
     }
 }
 
