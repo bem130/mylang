@@ -47,11 +47,11 @@
 ```
 ### 初期化付の変数の宣言
 ```bnf
-<stat-var-declaration-assign> ::= <expr> [ <space> ] '=>' [ <space> ] '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
+<stat-var-declaration-assign> ::= <expr> [ <space> ] ':>' [ <space> ] '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
 ```
 ### 変数への代入
 ```bnf
-<stat-var-assign> ::= <expr> [ <space> ]  '=>' [ <space> ]  <var-name> [ <space> ]
+<stat-var-assign> ::= <expr> [ <space> ]  ':>' [ <space> ]  <var-name> [ <space> ]
 ```
 ### 式を実行
 ```bnf

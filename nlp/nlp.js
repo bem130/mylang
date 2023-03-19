@@ -1,9 +1,9 @@
 class NLPparse {
-    constructor(code) {
+    constructor(code,libfuncs=[]) {
         this.code = code+"\0";
         this.delete_comments();
         console.log(this.code)
-        this.names = [];
+        this.names = libfuncs;
         this.functions = {};
         this.globalvars = {};
         this.toplevel_parse();
@@ -21,16 +21,24 @@ class NLPparse {
                 return false;
             }
         }
+        this.check_identify()
         for (let name of this.functionnames) {
             this.info([name,"関数の名前を解決します"]);
-            let block = this.name_resolution(this.parsed[name],this.toplevel_names);
+            let block = this.name_resolutions(this.parsed[name],this.toplevel_names);
         }
         console.log("names",this.names)
         console.log("toplevel names",this.toplevel_names)
         return this.parsed;
     }
     error(i,level,msg) {
-        console.error(`[error:${i}]`,...msg);
+        if (i>=0) {
+            //console.error(`[error:${i}]`,...msg);
+            throw `[error:${i}] ${msg.join(" ")}`
+        }
+        else {
+            //console.error(`[error]`,...msg);
+            throw `[error] ${msg.join(" ")}`
+        }
     }
     info(msg) {
         console.log(`[info]`,...msg);
@@ -404,8 +412,8 @@ class NLPparse {
             }
             else { // <stat>
                 // <stat> ::= ( <stat-var-declaration-assign> | <stat-var-declaration> | <stat-var-assign> | <stat-run-expr> ) ';' // <stat-var-declaration> は、上位の場合分けで別処理になっている
-                // <stat-var-declaration-assign> ::= <expr> [ <space> ] '=>' [ <space> ] '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
-                // <stat-var-assign> ::= <expr> [ <space> ]  '=>' [ <space> ]  <var-name> [ <space> ]
+                // <stat-var-declaration-assign> ::= <expr> [ <space> ] ':>' [ <space> ] '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
+                // <stat-var-assign> ::= <expr> [ <space> ]  ':>' [ <space> ]  <var-name> [ <space> ]
                 // <stat-run-expr> ::= <expr> [ <space> ]
                 let assign = false;
                 while (i<block_code.length) {
@@ -413,7 +421,7 @@ class NLPparse {
                         i++;
                         break;
                     }
-                    else if (block_code.startsWith('=>',i)) {
+                    else if (block_code.startsWith(':>',i)) {
                         i+=2;
                         assign = true;
                         break;
@@ -537,29 +545,68 @@ class NLPparse {
         // }
         return list;
     }
-    name_resolution(block,namelist) {
-        console.log("resolution",block,namelist)
+    check_identify() {
+        let numbers = ["0","1","2","3","4","5","6","7","8","9"];
+        let forbiddensigns = ["!","{","}","(",")","[","]","\\","\"","'","`",":",";"];
+        for (let ident of this.names) {
+            let name = ident.name;
+            if (numbers.indexOf(name[0])!=-1) {
+                this.error(-1,"",["関数名・変数名の先頭に数字[0-9]は使えません",name])
+            }
+            for (let fbs of forbiddensigns) {
+                if (name.indexOf(fbs)!=-1) {
+                    this.error(-1,"",["関数名・変数名に記号[ ! { } ( ) [ ] \\ \" ' ` : ]は使えません",name])
+                }
+            }
+        }
+        return true;
+    }
+    name_resolution(token,namelist) {
+        for (let i=namelist.length-1;i>=0;i--) {
+            if (token[0]==namelist[i].name) {
+                token[1] = namelist[i].identity;
+                return;
+            }
+        }
+        console.log("Not Found",token)
+    }
+    name_resolutions(block,namelist) {
+        //console.log("resolution",block,namelist)
         let newnamelist = namelist.concat(block.var);
         for (let instats of block.stats) {
             if (instats.type=="stat") {
-                console.log("stat",instats)
+                //console.log("stat",instats);
+                if (instats.assign!=false) {
+                    this.name_resolution(instats.assign,newnamelist);
+                }
+                for (let i=0;i<instats.stat.length;i++) {
+                    this.name_resolution(instats.stat[i],newnamelist);
+                }
             }
             else if (instats.type=="while") {
-                console.log("while",instats)
-                this.name_resolution(instats.block,newnamelist);
+                //console.log("while",instats)
+                for (let i=0;i<instats.condition.length;i++) {
+                    this.name_resolution(instats.condition[i],newnamelist);
+                }
+                this.name_resolutions(instats.block,newnamelist);
             }
             else if (instats.type=="if") {
-                console.log("if",instats)
-                this.name_resolution(instats.block,newnamelist);
+                //console.log("if",instats)
+                this.name_resolutions(instats.block,newnamelist);
             }
         }
-        console.log("--")
+        //console.log("--",block)
     }
 }
 
 class NLPcompile_NVE {
     constructor(code) {
-        this.parsed = new NLPparse(code);
+        this.parsed = new NLPparse(code,[{name:"out",return:"void",args:"int",identity:0},{name:">",return:"int",args:"int,int",identity:1},{name:"<",return:"int",args:"int,int",identity:2},{name:"+",return:"int",args:"int,int",identity:3}]);
+        console.log(this.parsed)
+        if (this.parsed==false) {
+            console.log("Error");
+            return false;
+        }
         console.log(this.parsed);
         //this.nameeval();
     }
@@ -577,6 +624,9 @@ class NLPcompile_NVE {
         this.code = [];
         this.code.push(["jmp","#callmain"]);
         this.code.push(["fram",0]);
+
+        // library files
+        //
 
         let functionnames = Object.keys(this.parsed);
         for (let name of functionnames) {
@@ -613,94 +663,24 @@ let testcode = `
 }
 `
 testcode = `
-! void:fn:main() {(100)run;}
-!void:fn: run(int:max) {
+!fn:void:():main {
+    100 run;
+}
+!fn:void:(int:max):run {
     !int: x;
     !int: y;
     !int: z;
-    1 => x;
-    1 => y;
-    1 => z;
-    while (x max <) {
-        (x)out;
-        y x + => z;
-        y => x;
-        z => y;
-    }
-}
-`
-testcode = `
-!void:():fn:main {
-    !ctrl:(true):if {
-        100 run;
-    }
-    100 run;
-    "Hello World!" => !string: hw;
-    return;
-}
-// comment
-!void:(int:max):fn: run {
-    !int: x;
-    1 => x;
-    1 => !int: y;
-    2 number - => !int: z;
+    1 :> x;
+    1 :> y;
+    1 :> z;
     !ctrl:(x max <):while {
         x out;
-        y x a + => z;
-        y => x;
-        z => y;
+        y x + :> z;
+        y :> x;
+        z :> y;
     }
-    return;
-}
-!int:():fn:number {
-    return 1;
 }
 `
-testcode = `
-// グローバル変数
-!  global:int: zzz;
-!  global:int: abc;
-// 定数
-//!const:int: one = 1;
-// 型
-//!type: decimal {
-//    !uint: num;
-//    !ubyte: point;
-//    !bool: sign;
-//}
 
-! fn: void:():main {
-    zzz out;
-    !ctrl:(true):if {
-        -1 => zzz;
-        100 run;
-    }
-    100 run;
-    "Hello World!" => !string: hw;
-    return;
-}
-// comment
-!fn:void:(int:max):run {
-    zzz out;
-    !int: x;
-    one => x;
-    one => !int: y;
-    2 number - => !int: z;
-    !ctrl:(x max <):while {
-        x out;
-        y x + => z;
-        y => x;
-        z => y;
-    }
-    x => zzz;
-    return;
-}
-!fn:int:():number {
-    !ctrl:(true):if {
-        1 => !int: one;
-    }
-    return one;
-}
-`
 new NLPcompile_NVE(testcode);
 }
