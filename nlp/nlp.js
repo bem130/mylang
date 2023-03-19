@@ -10,8 +10,9 @@ class NLPparse {
         this.parsed = {};
         console.log(this.functions)
         console.log(this.globalvars)
-        let functionnames = Object.keys(this.functions);
-        for (let name of functionnames) {
+        this.toplevel_names = this.names.concat();
+        this.functionnames = Object.keys(this.functions);
+        for (let name of this.functionnames) {
             this.info([name,"関数の内容を読み込みます"]);
             let block = this.block_parse(this.functions[name].block);
             console.log(block)
@@ -20,8 +21,12 @@ class NLPparse {
                 return false;
             }
         }
-        this.name_resolution();
+        for (let name of this.functionnames) {
+            this.info([name,"関数の名前を解決します"]);
+            let block = this.name_resolution(this.parsed[name],this.toplevel_names);
+        }
         console.log("names",this.names)
+        console.log("toplevel names",this.toplevel_names)
         return this.parsed;
     }
     error(i,level,msg) {
@@ -91,8 +96,8 @@ class NLPparse {
                     //<func> ::= '!' [ <space> ] 'fn:' [ <space> ] <var-type> ':(' <func-arg-def> '):' [ <space> ] <func-name> { ( <space> | <eol> ) } '{' <block> '}'
                     let func = {
                         name: "",
-                        args: "",
                         return: "",
+                        args: "",
                         block: "",
                         identity: null,
                     };
@@ -198,8 +203,8 @@ class NLPparse {
                     // <global-var-declaration> ::= '!' [ <space> ] 'global:' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ] ';'
                     i+=7;
                     let global = {
-                        type: "",
                         name: "",
+                        type: "",
                         identity: null,
                     }
                     // [ <space> ]
@@ -253,7 +258,8 @@ class NLPparse {
     }
     block_parse(block_code) {
         // <block> ::= { <blank-lines> ( <stat> | <control>) } <blank-lines>
-        let list = {var:{},stats:[]};
+        let list = {var:[],stats:[]};
+        let varnames = [];
         let i = 0;
         while (i<block_code.length) {
             let stat = {
@@ -357,12 +363,12 @@ class NLPparse {
                 else {
                     // <stat-var-declaration> ::= '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
                     let decl = {
-                        var_type: "",
-                        var_name: "",
+                        name: "",
+                        type: "",
                         identity: null,
                     }
                     while (i<block_code.length&&block_code[i]!=":") {
-                        decl.var_type += block_code[i];
+                        decl.type += block_code[i];
                         i++;
                     }
                     i++;
@@ -383,14 +389,15 @@ class NLPparse {
                             i++;
                             break;
                         }
-                        decl.var_name += block_code[i];
+                        decl.name += block_code[i];
                         i++;
                     }
-                    if (list.var[decl.var_name]!=null) {
-                        this.error(i,block_code,["変数の定義に問題があります","同じブロック内で、同じ名前の変数は定義できません",decl.var_name]);
+                    if (varnames.indexOf(decl.name)!=-1) {
+                        this.error(i,block_code,["変数の定義に問題があります","同じブロック内で、同じ名前の変数は定義できません",decl.name]);
                         return false;
                     }
-                    list.var[decl.var_name] = decl;
+                    list.var.push(decl);
+                    varnames.push(decl.name);
                     decl.identity = this.names.length;
                     this.names.push(decl);
                 }
@@ -427,14 +434,14 @@ class NLPparse {
                     let si = 0;
                     if (stat.assign[si]=="!") { // '!' // <stat-var-declaration-assign>
                         let decl = {
-                            var_type: "",
-                            var_name: "",
+                            name: "",
+                            type: "",
                             identity: null,
                         }
                         si++;
                         while (si<stat.assign.length&&stat.assign[si]==" ") {si++;}
                         while (si<stat.assign.length&&stat.assign[si]!=":") {
-                            decl.var_type += stat.assign[si];
+                            decl.type += stat.assign[si];
                             si++;
                         }
                         if (stat.assign[si]!=":") {
@@ -443,17 +450,18 @@ class NLPparse {
                         si++;
                         while (si<stat.assign.length&&stat.assign[si]==" ") {si++;}
                         while (si<stat.assign.length) {
-                            decl.var_name += stat.assign[si];
+                            decl.name += stat.assign[si];
                             si++;
                         }
-                        if (list.var[decl.var_name]!=null) {
-                            this.error(i,block_code,["変数の定義に問題があります","同じブロック内で、同じ名前の変数は定義できません",decl.var_name]);
+                        if (varnames.indexOf(decl.name)!=-1) {
+                            this.error(i,block_code,["変数の定義に問題があります","同じブロック内で、同じ名前の変数は定義できません",decl.name]);
                             return false;
                         }
-                        list.var[decl.var_name] = decl;
+                        list.var.push(decl);
+                        varnames.push(decl.name);
                         decl.identity = this.names.length;
                         this.names.push(decl);
-                        stat.assign = decl.var_name;
+                        stat.assign = decl.name;
                     }
                 }
                 else {
@@ -473,7 +481,7 @@ class NLPparse {
             if (stat_code[i]==" ") {
                 // console.log(code,0)
                 if (code!="") {
-                    list.push(code);
+                    list.push([code,null]);
                 }
                 code = "";
                 i++;
@@ -481,7 +489,7 @@ class NLPparse {
             else if (i==stat_code.length) {
                 // console.log(code,0)
                 if (code!="") {
-                    list.push(code);
+                    list.push([code,null]);
                 }
                 code = "";
             }
@@ -528,7 +536,9 @@ class NLPparse {
         // }
         return list;
     }
-    name_resolution() {
+    name_resolution(block,namelist) {
+        console.log("resolution",block,namelist)
+        let newnamelist = namelist.concat(block.var);
     }
 }
 
@@ -663,7 +673,7 @@ testcode = `
     2 number - => !int: z;
     !ctrl:(x max <):while {
         x out;
-        y x a + => z;
+        y x + => z;
         y => x;
         z => y;
     }
