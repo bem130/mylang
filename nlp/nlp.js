@@ -581,9 +581,11 @@ class NLPparse {
         return true;
     }
     name_resolution(token,namelist) {
+        console.log("fweagadfsdfwga",token)
         for (let i=namelist.length-1;i>=0;i--) {
             if (token.name==namelist[i].name) {
                 token.identifier = namelist[i].identifier;
+                token.kind = namelist[i].kind;
                 return;
             }
         }
