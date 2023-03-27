@@ -14,9 +14,12 @@ class NLPparse {
         this.functionnames = Object.keys(this.functions);
         for (let name of this.functionnames) {
             this.info([name,"関数の内容を読み込みます"]);
-            let block = this.block_parse(this.functions[name].block);
+            let varnames = [];
+            let args = this.args_parse(this.functions[name].args,varnames);
+            let block = this.block_parse(this.functions[name].block,varnames);
+            console.log("varnames",varnames);
             console.log(block)
-            this.parsed[name] = block;
+            this.parsed[name] = {block:block,args:args};
             if (block==false) {
                 return false;
             }
@@ -24,7 +27,7 @@ class NLPparse {
         this.check_identify()
         for (let name of this.functionnames) {
             this.info([name,"関数の名前を解決します"]);
-            let block = this.name_resolutions(this.parsed[name],this.toplevel_names);
+            let block = this.name_resolutions(this.parsed[name].block,this.toplevel_names.concat(this.parsed[name].args));
         }
         console.log("names",this.names)
         console.log("toplevel names",this.toplevel_names)
@@ -264,10 +267,30 @@ class NLPparse {
             i++;
         }
     }
-    block_parse(block_code) {
+    args_parse(argstxt,varnames) {
+        let args = [];
+        let sp_argstxt = argstxt.split(",");
+        console.log("fweagwsafdsa",sp_argstxt)
+        for (let argtxt of sp_argstxt) {
+            if (argtxt!="") {
+                let sp_argtxt = argtxt.split(":");
+                console.log(sp_argtxt)
+                let arg = {name:sp_argtxt[1],type:sp_argtxt[0],identify:null};
+                args.push(arg);
+                if (varnames.indexOf(arg.name)!=-1) {
+                    this.error(i,block_code,["変数の定義に問題があります","同じブロック内で、同じ名前の変数は定義できません",arg.name]);
+                    return false;
+                }
+                arg.identity = this.names.length;
+                this.names.push(arg);
+            }
+        }
+        console.log(args)
+        return args;
+    }
+    block_parse(block_code,varnames) {
         // <block> ::= { <blank-lines> ( <stat> | <control>) } <blank-lines>
         let list = {var:[],stats:[]};
-        let varnames = [];
         let i = 0;
         while (i<block_code.length) {
             let stat = {
@@ -362,7 +385,7 @@ class NLPparse {
                         i++;
                     }
                     i++;
-                    ctrl.block = this.block_parse(ctrl.block);
+                    ctrl.block = this.block_parse(ctrl.block,[]);
                     if (ctrl.block==false) {
                         return false;
                     }
@@ -370,11 +393,7 @@ class NLPparse {
                 }
                 else {
                     // <stat-var-declaration> ::= '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
-                    let decl = {
-                        name: "",
-                        type: "",
-                        identity: null,
-                    }
+                    let decl = {name: "",type: "",identity: null,}
                     while (i<block_code.length&&block_code[i]!=":") {
                         decl.type += block_code[i];
                         i++;
@@ -547,7 +566,7 @@ class NLPparse {
     }
     check_identify() {
         let numbers = ["0","1","2","3","4","5","6","7","8","9"];
-        let forbiddensigns = ["!","{","}","(",")","[","]","\\","\"","'","`",":",";"];
+        let forbiddensigns = ["!","{","}","(",")","[","]","\\","\"","'","`",":",";",",","."];
         for (let ident of this.names) {
             let name = ident.name;
             if (numbers.indexOf(name[0])!=-1) {
@@ -555,7 +574,7 @@ class NLPparse {
             }
             for (let fbs of forbiddensigns) {
                 if (name.indexOf(fbs)!=-1) {
-                    this.error(-1,"",["関数名・変数名に記号[ ! { } ( ) [ ] \\ \" ' ` : ]は使えません",name])
+                    this.error(-1,"",["関数名・変数名に記号[ ! { } ( ) [ ] \\ \" ' ` : , . ]は使えません",name])
                 }
             }
         }
@@ -573,6 +592,7 @@ class NLPparse {
     name_resolutions(block,namelist) {
         //console.log("resolution",block,namelist)
         let newnamelist = namelist.concat(block.var);
+        console.log("newnamelist",newnamelist)
         for (let instats of block.stats) {
             if (instats.type=="stat") {
                 //console.log("stat",instats);
@@ -630,7 +650,7 @@ class NLPcompile_NVE {
 
         let functionnames = Object.keys(this.parsed);
         for (let name of functionnames) {
-            let block = this.parsed[name];
+            let block = this.parsed[name].block;
             console.log(block)
             this.code.push([name+":"]);
             let vars = Object.keys(block.var);
@@ -679,6 +699,9 @@ testcode = `
         y :> x;
         z :> y;
     }
+}
+!fn:void:(int:a,int:b,int:c):aaa {
+    100 run;
 }
 `
 
