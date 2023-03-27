@@ -24,7 +24,7 @@ class NLPparse {
                 return false;
             }
         }
-        this.check_identify()
+        this.check_identifier()
         for (let name of this.functionnames) {
             this.info([name,"関数の名前を解決します"]);
             let block = this.name_resolutions(this.parsed[name].block,this.toplevel_names.concat(this.parsed[name].args));
@@ -106,11 +106,12 @@ class NLPparse {
                 if (this.code.startsWith('fn:',i)) {
                     //<func> ::= '!' [ <space> ] 'fn:' [ <space> ] <var-type> ':(' <func-arg-def> '):' [ <space> ] <func-name> { ( <space> | <eol> ) } '{' <block> '}'
                     let func = {
+                        kind: "function",
                         name: "",
                         return: "",
                         args: "",
                         block: "",
-                        identity: null,
+                        identifier: null,
                     };
                     i+=3
                     // [ <space> ]
@@ -206,7 +207,7 @@ class NLPparse {
                         return false;
                     }
                     this.functions[func.name] = func;
-                    func.identity = this.names.length;
+                    func.identifier = this.names.length;
                     this.names.push(func);
                     this.info([func.name,"関数を読み込みました"]);
                 }
@@ -214,9 +215,10 @@ class NLPparse {
                     // <global-var-declaration> ::= '!' [ <space> ] 'global:' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ] ';'
                     i+=7;
                     let global = {
+                        kind: "globalvariable",
                         name: "",
                         type: "",
-                        identity: null,
+                        identifier: null,
                     }
                     // [ <space> ]
                     i++;
@@ -247,7 +249,7 @@ class NLPparse {
                         return false;
                     }
                     this.globalvars[global.name] = global;
-                    global.identity = this.names.length;
+                    global.identifier = this.names.length;
                     this.names.push(global);
                     this.info([global.name,"グローバル変数を読み込みました"]);
                 }
@@ -270,22 +272,19 @@ class NLPparse {
     args_parse(argstxt,varnames) {
         let args = [];
         let sp_argstxt = argstxt.split(",");
-        console.log("fweagwsafdsa",sp_argstxt)
         for (let argtxt of sp_argstxt) {
             if (argtxt!="") {
                 let sp_argtxt = argtxt.split(":");
-                console.log(sp_argtxt)
-                let arg = {name:sp_argtxt[1],type:sp_argtxt[0],identify:null};
+                let arg = {kind:"argument",name:sp_argtxt[1],type:sp_argtxt[0],identifier:null};
                 args.push(arg);
                 if (varnames.indexOf(arg.name)!=-1) {
                     this.error(i,block_code,["変数の定義に問題があります","同じブロック内で、同じ名前の変数は定義できません",arg.name]);
                     return false;
                 }
-                arg.identity = this.names.length;
+                arg.identifier = this.names.length;
                 this.names.push(arg);
             }
         }
-        console.log(args)
         return args;
     }
     block_parse(block_code,varnames) {
@@ -393,7 +392,7 @@ class NLPparse {
                 }
                 else {
                     // <stat-var-declaration> ::= '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
-                    let decl = {name: "",type: "",identity: null,}
+                    let decl = {kind: "variable",name: "",type: "",identifier: null,}
                     while (i<block_code.length&&block_code[i]!=":") {
                         decl.type += block_code[i];
                         i++;
@@ -425,7 +424,7 @@ class NLPparse {
                     }
                     list.var.push(decl);
                     varnames.push(decl.name);
-                    decl.identity = this.names.length;
+                    decl.identifier = this.names.length;
                     this.names.push(decl);
                 }
             }
@@ -461,9 +460,10 @@ class NLPparse {
                     let si = 0;
                     if (stat.assign[si]=="!") { // '!' // <stat-var-declaration-assign>
                         let decl = {
+                            kind: "variable",
                             name: "",
                             type: "",
-                            identity: null,
+                            identifier: null,
                         }
                         si++;
                         while (si<stat.assign.length&&stat.assign[si]==" ") {si++;}
@@ -486,11 +486,11 @@ class NLPparse {
                         }
                         list.var.push(decl);
                         varnames.push(decl.name);
-                        decl.identity = this.names.length;
+                        decl.identifier = this.names.length;
                         this.names.push(decl);
                         stat.assign = decl.name;
                     }
-                    stat.assign = [stat.assign,null]
+                    stat.assign = {name:stat.assign,identifier:null};
                 }
                 else {
                     stat.assign = false;
@@ -509,7 +509,7 @@ class NLPparse {
             if (stat_code[i]==" ") {
                 // console.log(code,0)
                 if (code!="") {
-                    list.push([code,null]);
+                    list.push({name:code,identifier:null,kind:null});
                 }
                 code = "";
                 i++;
@@ -517,7 +517,7 @@ class NLPparse {
             else if (i==stat_code.length) {
                 // console.log(code,0)
                 if (code!="") {
-                    list.push([code,null]);
+                    list.push({name:code,identifier:null,kind:null});
                 }
                 code = "";
             }
@@ -564,7 +564,7 @@ class NLPparse {
         // }
         return list;
     }
-    check_identify() {
+    check_identifier() {
         let numbers = ["0","1","2","3","4","5","6","7","8","9"];
         let forbiddensigns = ["!","{","}","(",")","[","]","\\","\"","'","`",":",";",",","."];
         for (let ident of this.names) {
@@ -582,12 +582,12 @@ class NLPparse {
     }
     name_resolution(token,namelist) {
         for (let i=namelist.length-1;i>=0;i--) {
-            if (token[0]==namelist[i].name) {
-                token[1] = namelist[i].identity;
+            if (token.name==namelist[i].name) {
+                token.identifier = namelist[i].identifier;
                 return;
             }
         }
-        console.log("Not Found",token)
+        //console.log("Not Found",token)
     }
     name_resolutions(block,namelist) {
         //console.log("resolution",block,namelist)
@@ -621,13 +621,14 @@ class NLPparse {
 
 class NLPcompile_NVE {
     constructor(code) {
-        this.parsed = new NLPparse(code,[{name:"out",return:"void",args:"int",identity:0},{name:">",return:"int",args:"int,int",identity:1},{name:"<",return:"int",args:"int,int",identity:2},{name:"+",return:"int",args:"int,int",identity:3}]);
+        this.parsed = new NLPparse(code,[{kind:"function",name:"out",return:"void",args:"int",identifier:0},{kind:"function",name:">",return:"int",args:"int,int",identifier:1},{kind:"function",name:"<",return:"int",args:"int,int",identifier:2},{kind:"function",name:"+",return:"int",args:"int,int",identifier:3}]);
         console.log(this.parsed)
         if (this.parsed==false) {
             console.log("Error");
             return false;
         }
         console.log(this.parsed);
+        console.log(JSON.stringify(this.parsed))
         //this.nameeval();
     }
     nameeval() {
