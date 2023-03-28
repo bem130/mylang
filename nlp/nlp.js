@@ -17,7 +17,6 @@ class NLPparse {
             let varnames = [];
             let args = this.args_parse(this.functions[name].args,varnames);
             let block = this.block_parse(this.functions[name].block,varnames);
-            console.log("varnames",varnames);
             console.log(block)
             this.parsed[name] = {block:block,args:args};
             if (block==false) {
@@ -111,7 +110,6 @@ class NLPparse {
                         return: "",
                         args: "",
                         block: "",
-                        identifier: null,
                     };
                     i+=3
                     // [ <space> ]
@@ -218,7 +216,6 @@ class NLPparse {
                         kind: "globalvariable",
                         name: "",
                         type: "",
-                        identifier: null,
                     }
                     // [ <space> ]
                     i++;
@@ -275,7 +272,7 @@ class NLPparse {
         for (let argtxt of sp_argstxt) {
             if (argtxt!="") {
                 let sp_argtxt = argtxt.split(":");
-                let arg = {kind:"argument",name:sp_argtxt[1],type:sp_argtxt[0],identifier:null};
+                let arg = {kind:"argument",name:sp_argtxt[1],type:sp_argtxt[0]};
                 args.push(arg);
                 if (varnames.indexOf(arg.name)!=-1) {
                     this.error(i,block_code,["変数の定義に問題があります","同じブロック内で、同じ名前の変数は定義できません",arg.name]);
@@ -392,7 +389,7 @@ class NLPparse {
                 }
                 else {
                     // <stat-var-declaration> ::= '!' [ <space> ] <var-type> ':' [ <space> ] <var-name> [ <space> ]
-                    let decl = {kind: "variable",name: "",type: "",identifier: null,}
+                    let decl = {kind: "variable",name: "",type: "",}
                     while (i<block_code.length&&block_code[i]!=":") {
                         decl.type += block_code[i];
                         i++;
@@ -463,7 +460,6 @@ class NLPparse {
                             kind: "variable",
                             name: "",
                             type: "",
-                            identifier: null,
                         }
                         si++;
                         while (si<stat.assign.length&&stat.assign[si]==" ") {si++;}
@@ -490,7 +486,7 @@ class NLPparse {
                         this.names.push(decl);
                         stat.assign = decl.name;
                     }
-                    stat.assign = {name:stat.assign,identifier:null};
+                    stat.assign = {name:stat.assign};
                 }
                 else {
                     stat.assign = false;
@@ -509,7 +505,7 @@ class NLPparse {
             if (stat_code[i]==" ") {
                 // console.log(code,0)
                 if (code!="") {
-                    list.push({name:code,identifier:null,kind:null});
+                    list.push({name:code});
                 }
                 code = "";
                 i++;
@@ -517,7 +513,7 @@ class NLPparse {
             else if (i==stat_code.length) {
                 // console.log(code,0)
                 if (code!="") {
-                    list.push({name:code,identifier:null,kind:null});
+                    list.push({name:code});
                 }
                 code = "";
             }
@@ -580,21 +576,26 @@ class NLPparse {
         }
         return true;
     }
+    literal(token) {
+        console.log("literal",token);
+        token.identifier = "literal";
+        token.type = "int";
+    }
     name_resolution(token,namelist) {
-        console.log("fweagadfsdfwga",token)
         for (let i=namelist.length-1;i>=0;i--) {
             if (token.name==namelist[i].name) {
                 token.identifier = namelist[i].identifier;
                 token.kind = namelist[i].kind;
+                token.type = namelist[i].type;
                 return;
             }
         }
+        this.literal(token);
         //console.log("Not Found",token)
     }
     name_resolutions(block,namelist) {
         //console.log("resolution",block,namelist)
         let newnamelist = namelist.concat(block.var);
-        console.log("newnamelist",newnamelist)
         for (let instats of block.stats) {
             if (instats.type=="stat") {
                 //console.log("stat",instats);
